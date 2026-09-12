@@ -139,9 +139,6 @@ scripts/                  # 图标生成 / 冒烟测试 / 网络验证
 - Firefox 使用 `npm run build:firefox` 构建（需要 Firefox 113+，其 MV3 对 host permission 采用点击授权模式）。
 
 ## 作者
-
-**handsometaoa** · [2216662881@qq.com](mailto:2216662881@qq.com)
-
 - GitHub：<https://github.com/handsometaoa>
 - 项目仓库：<https://github.com/handsometaoa/HeaderKeeper>
 - 问题反馈：<https://github.com/handsometaoa/HeaderKeeper/issues>
