@@ -2,7 +2,7 @@
   "name": "header-keeper",
   "description": "按域名匹配系统，每个系统维护多个需求注入方案（泳道），一键切换重写请求 Header",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "handsometaoa",
     "email": "2216662881@qq.com",
