@@ -1,7 +1,7 @@
 import { browser } from '#imports';
-import { matchSystems } from './domains';
-import { schemeExpired } from './ops';
-import { loadConfig } from './store';
+import { matchSystems } from '@/lib/domains';
+import { schemeExpired } from '@/lib/schemes';
+import { loadConfig } from '@/services/store';
 
 /** 从 URL 提取域名（非 http/https 返回 null） */
 export function hostOf(url: string | undefined): string | null {

@@ -1,4 +1,4 @@
-@import '../../lib/base.css';
+@import '@/styles/base.css';
 
 .page {
   min-height: 100vh;

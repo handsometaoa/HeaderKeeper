@@ -1,7 +1,7 @@
 import { storage } from '#imports';
-import type { HeaderPair, LaneConfig, Scheme } from './types';
-import { normalizeConfig } from './ops';
-import { uid } from './uid';
+import type { HeaderPair, LaneConfig, Scheme } from '@/lib/types';
+import { normalizeConfig } from '@/lib/ops';
+import { uid } from '@/utils/uid';
 
 const CONFIG_KEY = 'local:laneConfig';
 

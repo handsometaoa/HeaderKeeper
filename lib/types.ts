@@ -1,3 +1,5 @@
+import type { Language } from './i18n';
+
 /** 一个 Header 键值对（需求方案内的注入项） */
 export interface HeaderPair {
   id: string;
@@ -42,5 +44,7 @@ export interface SystemEntry {
 export interface LaneConfig {
   /** 全局注入总开关，关闭后不注入任何 Header */
   globalEnabled: boolean;
+  /** 界面语言（zh = 中文，en = English）；缺省为 zh */
+  language?: Language;
   systems: SystemEntry[];
 }

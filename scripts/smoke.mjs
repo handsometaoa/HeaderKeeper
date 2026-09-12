@@ -390,7 +390,7 @@ async function main() {
       await sleep(500);
     }
     const optionOk = await options.eval(
-      `document.body.innerText.includes('Header 注入助手') && document.body.innerText.includes('添加系统') && document.body.innerText.includes('HEADER KEY') && document.body.innerText.includes('过期时间')`,
+      `document.body.innerText.includes('HeaderKeeper') && document.body.innerText.includes('添加系统') && document.body.innerText.includes('HEADER KEY') && document.body.innerText.includes('过期时间')`,
     );
     console.log(`✓ Options 页渲染正常=${optionOk}`);
     if (!optionOk || !sysItemReady) throw new Error('Options 页渲染不符合预期');

@@ -1,6 +1,6 @@
 import type { LaneConfig } from './types';
 import { domainBase } from './domains';
-import { schemeExpired } from './ops';
+import { schemeExpired } from './schemes';
 
 const ALL_RESOURCE_TYPES = [
   'main_frame',

@@ -4,3 +4,4 @@ node_modules
 stats.html
 *.log
 smoke-*.png
+.idea

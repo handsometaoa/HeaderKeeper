@@ -1,7 +1,7 @@
 import { browser } from '#imports';
-import { buildDnrRules } from './dnr';
-import { refreshBadge } from './badge';
-import { loadConfig } from './store';
+import { buildDnrRules } from '@/lib/dnr';
+import { refreshBadge } from '@/services/badge';
+import { loadConfig } from '@/services/store';
 
 async function apply() {
   const config = await loadConfig();

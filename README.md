@@ -14,6 +14,16 @@
 - **弹窗（主界面）**：深色总开关卡片 + 当前域名匹配的系统列表 + 「当前注入」汇总（所有匹配系统实际会发送的 `KEY = VALUE`）+ Key 冲突提醒 + 未匹配时快捷创建系统。
 - **配置页**：灰底仪表盘风格，左侧深色系统列表（含注入开关、选中展开详情），右侧方案卡片（倒序展示、右缘方案目录栏快速定位）。
 
+## 界面截图
+
+**弹窗主界面** —— 全局总开关、当前注入汇总、一键切换泳道：
+
+![弹窗主界面](docs/images/popup.png)
+
+**配置页** —— 深色系统列表 + 需求方案卡片 + 方案目录栏：
+
+![配置页](docs/images/options.png)
+
 ## 核心概念
 
 ```
@@ -98,11 +108,46 @@ npm run zip        # 打包 zip（发布用）
 
 `npm run smoke` 用全新临时 profile 启动无头 Chrome for Testing（默认路径 `C:/Users/Wgoto/AppData/Local/ChromeForTesting/chrome.exe`，可用 `CHROME_PATH` 覆盖），端到端验证：Popup 渲染、方案切换、存储写入、DNR 规则生成/清理、三层开关、角标按站点显示、方案过期、未匹配快捷创建、Key 冲突提示、配置页渲染与增删流程，并输出截图。运行前请先 `npm run build`。
 
+## 项目结构
+
+```
+entrypoints/              # WXT 入口
+  background/index.ts     # 后台：DNR 同步兜底、tabs 事件刷新角标
+  popup/                  # 弹窗主界面（App + components/）
+  options/                # 配置页（App + components/）
+lib/                      # 领域模型与纯逻辑（不依赖浏览器 API）
+  types.ts                # 数据模型
+  domains.ts              # 域名解析与匹配
+  ops.ts                  # 配置增删改与导入清洗
+  schemes.ts              # 方案有效期 / 生效方案计算
+  conflicts.ts            # 跨系统 Key 冲突检测
+  dnr.ts                  # declarativeNetRequest 规则构建
+services/                 # 浏览器平台服务
+  store.ts                # 配置存储（含旧结构自动迁移）
+  sync.ts                 # DNR 动态规则串行同步
+  badge.ts                # 按站点刷新工具栏角标
+hooks/                    # React hooks（useLaneConfig：加载 / 防抖保存）
+utils/                    # 通用工具（uid / format）
+styles/                   # 共享样式（设计令牌与基础组件）
+scripts/                  # 图标生成 / 冒烟测试 / 网络验证
+```
+
 ## 说明与限制
 
 - Header 注入使用 `declarativeNetRequest` 的 `modifyHeaders`，需声明 `<all_urls>` host 权限；本工具面向本地/内网测试，请勿发布到应用商店。
 - 多个系统命中同一域名且写入同名 Header 时，系统列表中**靠下的系统覆盖靠上的**（弹窗冲突提示会指出）。
 - Firefox 使用 `npm run build:firefox` 构建（需要 Firefox 113+，其 MV3 对 host permission 采用点击授权模式）。
+
+## 作者
+
+**handsometaoa** · [2216662881@qq.com](mailto:2216662881@qq.com)
+
+- GitHub：<https://github.com/handsometaoa>
+- 项目仓库：<https://github.com/handsometaoa/HeaderKeeper>
+- 问题反馈：<https://github.com/handsometaoa/HeaderKeeper/issues>
+
+如果这个工具对你有帮助，欢迎去仓库点个 Star ⭐
+（插件内也可直达：弹窗页脚「作者 →」或配置页底部「作者页」）
 
 ## License
 

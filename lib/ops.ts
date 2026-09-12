@@ -1,6 +1,7 @@
 import type { HeaderPair, LaneConfig, Scheme, SystemEntry } from './types';
-import { matchSystems, normalizeDomainToken } from './domains';
-import { uid } from './uid';
+import { normalizeDomainToken } from './domains';
+import { normalizeLanguage } from './i18n';
+import { uid } from '@/utils/uid';
 
 export function updateSystem(
   config: LaneConfig,
@@ -34,53 +35,6 @@ export function setActiveScheme(
   }));
 }
 
-/** 方案是否已过期（无过期时间视为永久有效） */
-export function schemeExpired(scheme: Scheme, now: number = Date.now()): boolean {
-  if (!scheme.expiresAt) return false;
-  const t = Date.parse(scheme.expiresAt);
-  return Number.isFinite(t) && now >= t;
-}
-
-/** 系统当前真正生效的方案（存在、且未过期）；没有则返回 null */
-export function activeInjectableScheme(system: SystemEntry): Scheme | null {
-  const scheme = system.schemes.find((s) => s.id === system.activeSchemeId) ?? null;
-  if (!scheme || schemeExpired(scheme)) return null;
-  return scheme;
-}
-
-export interface HeaderConflict {
-  /** 冲突的 Header Key（保留首次出现的大小写） */
-  key: string;
-  /** 同时注入该 Key 的系统名 */
-  systems: string[];
-}
-
-/**
- * 检测同一域名下多个系统注入相同 Header Key 的冲突。
- * 只统计真正会注入的 Header：系统匹配 host 且开关开启、方案 ACTIVE 且未过期、键值非空。
- */
-export function findHeaderConflicts(
-  systems: SystemEntry[],
-  host: string,
-): HeaderConflict[] {
-  const byKey = new Map<string, HeaderConflict>();
-  for (const system of matchSystems(systems, host)) {
-    if (system.enabled === false) continue;
-    const scheme = activeInjectableScheme(system);
-    if (!scheme) continue;
-    const name = system.name || '未命名系统';
-    for (const header of scheme.headers) {
-      const key = header.key.trim();
-      if (!key || !header.value.trim()) continue;
-      const lower = key.toLowerCase();
-      const entry = byKey.get(lower) ?? { key, systems: [] };
-      if (!entry.systems.includes(name)) entry.systems.push(name);
-      byKey.set(lower, entry);
-    }
-  }
-  return [...byKey.values()].filter((c) => c.systems.length >= 2);
-}
-
 /** 系统级注入开关 */
 export function setSystemEnabled(
   config: LaneConfig,
@@ -88,6 +42,11 @@ export function setSystemEnabled(
   enabled: boolean,
 ): LaneConfig {
   return updateSystem(config, systemId, (s) => ({ ...s, enabled }));
+}
+
+function defaultNewSystemName(config: LaneConfig): string {
+  const count = config.systems.filter((s) => s.name.startsWith('新建系统')).length;
+  return count === 0 ? '新建系统' : `新建系统 ${count + 1}`;
 }
 
 function newSystem(name: string, domains: string[]): SystemEntry {
@@ -101,12 +60,7 @@ function newSystem(name: string, domains: string[]): SystemEntry {
   };
 }
 
-function defaultNewSystemName(config: LaneConfig): string {
-  const count = config.systems.filter((s) => s.name.startsWith('新建系统')).length;
-  return count === 0 ? '新建系统' : `新建系统 ${count + 1}`;
-}
-
-/** 新建系统（带一个空的需求1方案），返回新配置与新建系统的 id */
+/** 新建系统（不带默认方案），返回新配置与新建系统的 id */
 export function addSystem(
   config: LaneConfig,
   init?: { name?: string; domains?: string[] },
@@ -117,11 +71,7 @@ export function addSystem(
 }
 
 /** Popup 快捷创建：以当前域名为域名建系统 */
-export function quickCreateSystem(
-  config: LaneConfig,
-  name: string,
-  host: string,
-): LaneConfig {
+export function quickCreateSystem(config: LaneConfig, name: string, host: string): LaneConfig {
   return { ...config, systems: [...config.systems, newSystem(name.trim() || host, [host])] };
 }
 
@@ -129,7 +79,6 @@ export function deleteSystem(config: LaneConfig, systemId: string): LaneConfig {
   return { ...config, systems: config.systems.filter((s) => s.id !== systemId) };
 }
 
-/** 为系统添加需求方案（名称与描述由表单提供，必填） */
 export function addScheme(
   config: LaneConfig,
   systemId: string,
@@ -292,5 +241,9 @@ export function normalizeConfig(raw: unknown): LaneConfig {
       Array.isArray(s.schemes) ? cleanSystem(s) : legacyRuleToSystem(s),
     );
 
-  return { globalEnabled, systems };
+  return {
+    globalEnabled,
+    language: normalizeLanguage(src.language),
+    systems,
+  };
 }

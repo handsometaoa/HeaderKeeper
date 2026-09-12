@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { syncDnrRules } from './sync';
-import { loadConfig, saveConfig, watchConfig } from './store';
-import type { LaneConfig } from './types';
+import { syncDnrRules } from '@/services/sync';
+import { loadConfig, saveConfig, watchConfig } from '@/services/store';
+import type { LaneConfig } from '@/lib/types';
 
 const SAVE_DEBOUNCE_MS = 200;
+
+export type Update = (fn: (config: LaneConfig) => LaneConfig) => void;
 
 /**
  * Popup / Options 共用的配置状态：

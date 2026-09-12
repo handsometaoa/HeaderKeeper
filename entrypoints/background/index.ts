@@ -1,6 +1,6 @@
 import { defineBackground, browser } from '#imports';
-import { syncDnrRules } from '../lib/sync';
-import { refreshBadge, refreshBadgeIfActive } from '../lib/badge';
+import { syncDnrRules } from '@/services/sync';
+import { refreshBadge, refreshBadgeIfActive } from '@/services/badge';
 
 export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(() => void syncDnrRules());
