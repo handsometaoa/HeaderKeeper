@@ -1,36 +1,52 @@
 import { browser } from '#imports';
-import { schemeExpired } from '@/lib/schemes';
-import { setActiveScheme, setSystemEnabled } from '@/lib/ops';
-import type { SystemEntry } from '@/lib/types';
+import { requirementExpired } from '@/lib/requirements';
+import { setActiveRequirement, setSystemEnabled } from '@/lib/ops';
+import type { Requirement, SystemEntry } from '@/lib/types';
 import type { T } from '@/lib/i18n';
 import type { Update } from '@/hooks/useLaneConfig';
 
-function openOptions() {
-  void browser.runtime.openOptionsPage();
+/** 打开配置页并定位到该系统详情 */
+function openSystemOptions(systemId: string) {
+  const url = `${browser.runtime.getURL('/options.html')}?system=${encodeURIComponent(systemId)}`;
+  void browser.tabs.create({ url });
 }
 
 export function SystemCard({
   system,
+  requirements,
   globalEnabled,
   update,
   t,
 }: {
   system: SystemEntry;
+  requirements: Requirement[];
   globalEnabled: boolean;
   update: Update;
   t: T;
 }) {
   const enabled = system.enabled !== false;
-  // 过期的方案不在主界面展示、也不注入
-  const visibleSchemes = system.schemes.filter((s) => !schemeExpired(s));
-  const activeScheme = system.schemes.find((s) => s.id === system.activeSchemeId);
-  const injecting = enabled && !!activeScheme && !schemeExpired(activeScheme);
+  // 过期的需求不在主界面展示、也不注入
+  const visibleRequirements = requirements.filter((r) => !requirementExpired(r));
+  const active = requirements.find((r) => r.id === system.activeRequirementId);
+  const injecting = enabled && !!active && !requirementExpired(active);
+
   return (
     <section className="system-card">
       <div className="system-head">
         <span className={`sys-dot${injecting ? ' on' : ''}`} />
-        <span className="sys-name disp">{system.name || t('options.unnamed')}</span>
-        <span className="sys-domains mono">{system.domains.join(' · ')}</span>
+        <span className="sys-name disp">{system.name || t('settings.unnamedSystem')}</span>
+        <button
+          type="button"
+          className="edit-link"
+          title={t('card.editTitle')}
+          onClick={() => openSystemOptions(system.id)}
+        >
+          {t('card.edit')}
+        </button>
+        <span className="sys-domains mono" title={system.domains.join(' · ')}>
+          {system.domains[0] ?? t('domains.empty')}
+          {system.domains.length > 1 ? ` +${system.domains.length - 1}` : ''}
+        </span>
         <label
           className="switch mini"
           title={enabled ? t('card.switchOffTitle') : t('card.switchOnTitle')}
@@ -43,45 +59,40 @@ export function SystemCard({
           <span className="track" />
         </label>
       </div>
-      <div
-        className={
-          globalEnabled && enabled ? 'scheme-list' : 'scheme-list dim'
-        }
-      >
-        {system.schemes.length === 0 && (
-          <div className="scheme-empty">{t('card.none')}</div>
-        )}
-        {system.schemes.length > 0 && visibleSchemes.length === 0 && (
+      <div className={globalEnabled && enabled ? 'scheme-list' : 'scheme-list dim'}>
+        {requirements.length === 0 && <div className="scheme-empty">{t('card.none')}</div>}
+        {requirements.length > 0 && visibleRequirements.length === 0 && (
           <div className="scheme-empty">{t('card.allExpired')}</div>
         )}
-        {visibleSchemes.map((scheme, index) => {
-          const active = system.activeSchemeId === scheme.id;
+        {visibleRequirements.map((requirement, index) => {
+          const isActive = system.activeRequirementId === requirement.id;
           return (
             <button
               type="button"
-              key={scheme.id}
-              className={`scheme-row${active ? ' active' : ''}`}
-              title={active ? t('card.rowOnTitle') : t('card.rowOffTitle')}
+              key={requirement.id}
+              className={`scheme-row${isActive ? ' active' : ''}`}
+              title={isActive ? t('card.rowOnTitle') : t('card.rowOffTitle')}
               onClick={() =>
-                update((cfg) => setActiveScheme(cfg, system.id, active ? null : scheme.id))
+                update((cfg) =>
+                  setActiveRequirement(cfg, system.id, isActive ? null : requirement.id),
+                )
               }
             >
               <span className="scheme-index mono">{String(index + 1).padStart(2, '0')}</span>
               <span className="scheme-main">
-                <span className="scheme-name disp">{scheme.name || t('options.unnamed')}</span>
-                {scheme.description.trim() && (
-                  <span className="scheme-desc">{scheme.description}</span>
+                <span className="scheme-name disp">
+                  {requirement.name || t('requirement.unnamed')}
+                </span>
+                {requirement.description.trim() && (
+                  <span className="scheme-desc">{requirement.description}</span>
                 )}
               </span>
-              <span className="scheme-state mono">{active ? 'ACTIVE' : t('card.stateOff')}</span>
+              <span className="scheme-state mono">
+                {isActive ? t('card.stateOn') : t('card.stateOff')}
+              </span>
             </button>
           );
         })}
-      </div>
-      <div className="system-foot">
-        <button type="button" className="link-btn" onClick={openOptions}>
-          {t('card.edit')}
-        </button>
       </div>
     </section>
   );

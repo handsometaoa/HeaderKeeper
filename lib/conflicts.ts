@@ -1,6 +1,6 @@
-import type { SystemEntry } from './types';
+import type { LaneConfig } from './types';
 import { matchSystems } from './domains';
-import { activeInjectableScheme } from './schemes';
+import { activeInjectableRequirement } from './requirements';
 
 export interface HeaderConflict {
   /** 冲突的 Header Key（保留首次出现的大小写） */
@@ -11,19 +11,16 @@ export interface HeaderConflict {
 
 /**
  * 检测同一域名下多个系统注入相同 Header Key 的冲突。
- * 只统计真正会注入的 Header：系统匹配 host 且开关开启、方案 ACTIVE 且未过期、键值非空。
+ * 只统计真正会注入的 Header：系统匹配 host 且开关开启、需求使用中且未过期、键值非空。
  */
-export function findHeaderConflicts(
-  systems: SystemEntry[],
-  host: string,
-): HeaderConflict[] {
+export function findHeaderConflicts(config: LaneConfig, host: string): HeaderConflict[] {
   const byKey = new Map<string, HeaderConflict>();
-  for (const system of matchSystems(systems, host)) {
+  for (const system of matchSystems(config.systems, host)) {
     if (system.enabled === false) continue;
-    const scheme = activeInjectableScheme(system);
-    if (!scheme) continue;
+    const requirement = activeInjectableRequirement(config, system);
+    if (!requirement) continue;
     const name = system.name || '未命名系统';
-    for (const header of scheme.headers) {
+    for (const header of requirement.headers) {
       const key = header.key.trim();
       if (!key || !header.value.trim()) continue;
       const lower = key.toLowerCase();

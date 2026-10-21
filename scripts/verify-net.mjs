@@ -51,16 +51,26 @@ function cdp(wsUrl) {
 const PORT = 9452;
 const VALUE = `e2e-${Date.now().toString(36)}`;
 const config = {
+  version: 2,
   globalEnabled: true,
+  requirements: [
+    {
+      id: 'r1',
+      name: '需求1',
+      description: 'e2e 验证',
+      expiresAt: null,
+      createdAt: Date.now(),
+      headers: [{ id: 'p1', key: 'X-Lane', value: VALUE }],
+    },
+  ],
   systems: [
     {
       id: 's1',
       name: 'HTTPBIN 验证',
       domains: ['httpbin.org'],
-      activeSchemeId: 'sc1',
-      schemes: [
-        { id: 'sc1', name: '需求1', description: 'e2e 验证', headers: [{ id: 'p1', key: 'X-Lane', value: VALUE }] },
-      ],
+      enabled: true,
+      requirementIds: ['r1'],
+      activeRequirementId: 'r1',
     },
   ],
 };

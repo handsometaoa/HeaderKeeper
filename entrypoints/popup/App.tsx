@@ -3,12 +3,9 @@ import { browser } from '#imports';
 import { refreshBadge } from '@/services/badge';
 import { matchSystems } from '@/lib/domains';
 import { findHeaderConflicts } from '@/lib/conflicts';
-import { schemeExpired } from '@/lib/schemes';
-import { quickCreateSystem, setActiveScheme, setSystemEnabled } from '@/lib/ops';
+import { activeInjectableRequirement, systemRequirements } from '@/lib/requirements';
 import { QuickCreate } from './components/QuickCreate';
 import { SystemCard } from './components/SystemCard';
-import { AboutCard } from './components/AboutCard';
-import { LangToggle } from '@/components/LangToggle';
 import { useLaneConfig } from '@/hooks/useLaneConfig';
 import { useLangFromConfig } from '@/hooks/useI18n';
 
@@ -16,12 +13,33 @@ function openOptions() {
   void browser.runtime.openOptionsPage();
 }
 
+const POPUP_TAB_KEY = 'header-keeper.popupTab';
+type PopupTab = 'inject' | 'systems';
+
+/** 默认「当前注入」；读取上一次选择的 Tab */
+function readStoredTab(): PopupTab {
+  try {
+    return localStorage.getItem(POPUP_TAB_KEY) === 'systems' ? 'systems' : 'inject';
+  } catch {
+    return 'inject';
+  }
+}
+
 export default function App() {
   const { config, update } = useLaneConfig();
-  const { lang, t, setLang } = useLangFromConfig(config, update);
+  const { t } = useLangFromConfig(config, update);
   const [host, setHost] = useState<string | null>(null);
   const [hostResolved, setHostResolved] = useState(false);
-  const [view, setView] = useState<'main' | 'about'>('main');
+  // 两个分区互斥展示：命中系统多 / 注入 Header 多时避免纵向堆叠
+  const [tab, setTab] = useState<PopupTab>(readStoredTab);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(POPUP_TAB_KEY, tab);
+    } catch {
+      // localStorage 不可用时仅保留内存状态
+    }
+  }, [tab]);
 
   useEffect(() => {
     // 打开弹窗时按当前页面重算角标：
@@ -55,30 +73,53 @@ export default function App() {
 
   const matched = host ? matchSystems(config.systems, host) : [];
   // 多个系统同时注入同一 Header Key 时提示可能冲突
-  const conflicts = host ? findHeaderConflicts(config.systems, host) : [];
+  const conflicts = host ? findHeaderConflicts(config, host) : [];
   // 汇总当前域名下所有系统实际会注入的 Header（含来源系统，列表靠后者覆盖靠前）
   const injectingPairs = config.globalEnabled
     ? matched.flatMap((system) => {
         if (system.enabled === false) return [];
-        const scheme = system.schemes.find((s) => s.id === system.activeSchemeId);
-        if (!scheme || schemeExpired(scheme)) return [];
-        const name = system.name || t('options.unnamed');
-        return scheme.headers
+        const requirement = activeInjectableRequirement(config, system);
+        if (!requirement) return [];
+        const name = system.name || t('settings.unnamedSystem');
+        return requirement.headers
           .filter((h) => h.key.trim() && h.value.trim())
           .map((h) => ({ id: `${system.id}:${h.id}`, key: h.key, value: h.value, system: name }));
       })
     : [];
 
-  // 「关于」视图切换（在 JSX 外计算，避免 TS 收窄误报）；关于视图下按钮变为返回
-  const toggleAbout = () => setView((v) => (v === 'about' ? 'main' : 'about'));
-  const aboutLabel = view === 'about' ? t('popup.back') : t('popup.footerAbout');
-
   return (
     <div className="app">
-      <section className="master">
-        <div className="master-icon">⇥</div>
+      <header className="pop-head">
+        <div className="pop-brand">
+          <span className="pop-mark">⇥</span>
+          <span className="pop-name disp">HeaderKeeper</span>
+        </div>
+        <button
+          type="button"
+          className="icon-btn settings"
+          title={t('popup.settings')}
+          aria-label={t('popup.settings')}
+          onClick={openOptions}
+        >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+      </header>
+
+      <section className={`master${config.globalEnabled ? '' : ' off'}`}>
         <div className="master-text">
-          <div className="master-label mono">{t('master.label')}</div>
           <div className="master-title disp">
             {config.globalEnabled ? t('master.on') : t('master.off')}
           </div>
@@ -99,58 +140,85 @@ export default function App() {
         </label>
       </section>
 
-      {view === 'about' ? (
-        <AboutCard t={t} />
-      ) : (
-        <div className="body">
-            {!hostResolved ? (
-              <div className="page-hint mono">{t('popup.reading')}</div>
-            ) : host === null ? (
-              <div className="page-hint">{t('popup.nonWeb')}</div>
+      <div className="body">
+        {!hostResolved ? (
+          <div className="page-hint mono">{t('popup.reading')}</div>
+        ) : host === null ? (
+          <div className="page-hint">{t('popup.nonWeb')}</div>
+        ) : (
+          <>
+            <span className="host-value mono">{host}</span>
+            {conflicts.length > 0 && (
+              <div className="conflict-card">
+                <div className="conflict-title">{t('popup.conflictTitle')}</div>
+                <div className="conflict-body">
+                  {conflicts.map((conflict) => (
+                    <div key={conflict.key.toLowerCase()}>
+                      <b className="mono">{conflict.key}</b> {t('popup.conflictBy')}{' '}
+                      <b>{conflict.systems.join('、')}</b> {t('popup.conflictSuffix')}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {matched.length === 0 ? (
+              <QuickCreate host={host} update={update} t={t} />
             ) : (
               <>
-                <div className="host-bar">
-                  <span className="host-label mono">{t('popup.hostLabel')}</span>
-                  <span className="host-value mono">{host}</span>
-                </div>
-                {injectingPairs.length > 0 && (
-                  <section className="inject-card">
-                    <div className="inject-head">
-                      <span className="inject-label mono">{t('popup.injectLabel')}</span>
-                      <span className="inject-count mono">{injectingPairs.length}</span>
-                    </div>
-                    <div className="inject-pairs">
-                      {injectingPairs.map((pair) => (
-                        <div className="inject-pair mono" key={pair.id}>
-                          <span className="pair-k">{pair.key}</span>
-                          <span className="pair-sep">=</span>
-                          <span className="pair-v">{pair.value}</span>
-                          <span className="pair-sys">{pair.system}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-                {conflicts.length > 0 && (
-                  <div className="conflict-card">
-                    <div className="conflict-title">{t('popup.conflictTitle')}</div>
-                    <div className="conflict-body">
-                      {conflicts.map((conflict) => (
-                        <div key={conflict.key.toLowerCase()}>
-                          <b className="mono">{conflict.key}</b> {t('popup.conflictBy')}{' '}
-                          <b>{conflict.systems.join('、')}</b> {t('popup.conflictSuffix')}
-                        </div>
-                      ))}
-                    </div>
+                <div className="tabs-sticky">
+                  <div
+                    className="tabs"
+                    role="tablist"
+                    aria-label={t('popup.tabsLabel')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowLeft') setTab('inject');
+                      if (e.key === 'ArrowRight') setTab('systems');
+                    }}
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === 'inject'}
+                      className={`tab${tab === 'inject' ? ' active' : ''}`}
+                      onClick={() => setTab('inject')}
+                    >
+                      {t('popup.injectTab', { n: injectingPairs.length })}
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === 'systems'}
+                      className={`tab${tab === 'systems' ? ' active' : ''}`}
+                      onClick={() => setTab('systems')}
+                    >
+                      {t('popup.systems', { n: matched.length })}
+                    </button>
                   </div>
-                )}
-                {matched.length === 0 ? (
-                  <QuickCreate host={host} update={update} t={t} />
+                </div>
+
+                {tab === 'inject' ? (
+                  injectingPairs.length > 0 ? (
+                    <section className="inject-card">
+                      <div className="inject-pairs">
+                        {injectingPairs.map((pair) => (
+                          <div className="inject-pair mono" key={pair.id}>
+                            <span className="pair-k">{pair.key}</span>
+                            <span className="pair-sep">=</span>
+                            <span className="pair-v">{pair.value}</span>
+                            <span className="pair-sys">{pair.system}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ) : (
+                    <div className="inject-empty">{t('popup.injectEmpty')}</div>
+                  )
                 ) : (
                   matched.map((system) => (
                     <SystemCard
                       key={system.id}
                       system={system}
+                      requirements={systemRequirements(config, system)}
                       globalEnabled={config.globalEnabled}
                       update={update}
                       t={t}
@@ -159,25 +227,9 @@ export default function App() {
                 )}
               </>
             )}
-          </div>
-      )}
-
-      <footer className="footer">
-        <span className="mono">{t('popup.footerBrand')}</span>
-        <div className="footer-links">
-          <LangToggle lang={lang} onChange={setLang} title="Language / 语言" />
-          <button type="button" className="link-btn" onClick={openOptions}>
-            {t('popup.footerOptions')}
-          </button>
-          <button
-            type="button"
-            className="link-btn"
-            onClick={toggleAbout}
-          >
-            {aboutLabel}
-          </button>
-        </div>
-      </footer>
+          </>
+        )}
+      </div>
     </div>
   );
 }

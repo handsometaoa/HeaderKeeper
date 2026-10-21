@@ -19,7 +19,6 @@ export function QuickCreate({
   const [name, setName] = useState('');
   return (
     <section className="quick">
-      <div className="qc-label mono">{t('quick.label')}</div>
       <div className="qc-title disp">{t('quick.title')}</div>
       <div className="qc-desc">
         <span className="qc-domain-label">{t('quick.descDomain')}</span> <b className="mono">{host}</b> {t('quick.desc')}

@@ -1,5 +1,5 @@
 // 端到端冒烟测试：自动启动带插件的 Chrome for Testing（全新 profile），验证
-// Popup 渲染、需求方案切换、存储写入、DNR 动态规则同步、总开关与快捷创建，测完自动关闭。
+// 共享需求库、弹窗 Tab 记忆、系统/需求管理、筛选、DNR 同步与旧配置重置备份。
 // 用法：node scripts/smoke.mjs   （可用 CHROME_PATH 覆盖浏览器路径）
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -87,7 +87,7 @@ async function realClick(c, selector, index = 0) {
        const r = el.getBoundingClientRect();
        return JSON.stringify({x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2)});
      })()`,
-  ).then(JSON.parse);
+  ).then((s) => (s ? JSON.parse(s) : null));
   if (!rect) throw new Error(`未找到元素: ${selector}[${index}]`);
   for (const type of ['mousePressed', 'mouseReleased']) {
     await c.send('Input.dispatchMouseEvent', {
@@ -112,7 +112,47 @@ async function clickUntil(c, selector, predicate, attempts = 5) {
   throw new Error(`点击未生效: ${selector} (predicate: ${predicate})`);
 }
 
-/** 轮询等待 DNR 规则数量达到期望值（注意回调参数直接是规则数组） */
+/** React 受控输入框赋值（触发 input/change 事件） */
+async function setInput(c, selector, value, index = 0) {
+  const result = await c.eval(`(() => {
+    const el = document.querySelectorAll(${JSON.stringify(selector)})[${index}];
+    if (!el) return 'missing';
+    el.focus();
+    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+    setter.call(el, ${JSON.stringify(value)});
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return 'ok';
+  })()`);
+  if (result !== 'ok') throw new Error(`未找到输入框: ${selector}[${index}]`);
+}
+
+async function blur(c, selector, index = 0) {
+  await c.eval(`document.querySelectorAll(${JSON.stringify(selector)})[${index}]?.blur()`);
+}
+
+async function setSelect(c, selector, value, index = 0) {
+  const result = await c.eval(`(() => {
+    const el = document.querySelectorAll(${JSON.stringify(selector)})[${index}];
+    if (!el) return 'missing';
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+    setter.call(el, ${JSON.stringify(value)});
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return 'ok';
+  })()`);
+  if (result !== 'ok') throw new Error(`未找到下拉框: ${selector}[${index}]`);
+}
+
+async function getConfig(c) {
+  return JSON.parse(
+    await c.eval(
+      `chrome.storage.local.get('laneConfig').then(({laneConfig}) => JSON.stringify(laneConfig))`,
+    ),
+  );
+}
+
+/** 轮询等待 DNR 规则数量达到期望值 */
 async function waitDnrCount(c, expected, timeoutMs = 8000) {
   const deadline = Date.now() + timeoutMs;
   let count = -1;
@@ -136,6 +176,132 @@ async function waitBadge(c, expected, timeoutMs = 8000) {
     await sleep(400);
   }
   return text;
+}
+
+async function sync(c) {
+  await c.eval(`browser.runtime.sendMessage({type:'sync-dnr'}).then(() => 'ok').catch(String)`);
+}
+
+async function waitFor(c, expression, timeoutMs = 12000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await c.eval(expression)) return true;
+    await sleep(200);
+  }
+  return false;
+}
+
+async function waitImportParsed(c) {
+  const done = await waitFor(
+    c,
+    `!!document.querySelector('.import-preview') || !!document.querySelector('.import-error')`,
+  );
+  if (!done) throw new Error('需求导入解析超时');
+  const error = await c.eval(`document.querySelector('.import-error')?.textContent ?? ''`);
+  if (error) throw new Error(`需求导入解析失败: ${error}`);
+}
+
+const IMPORT_STANDARD_JSON = JSON.stringify([
+  {
+    id: 'import-a',
+    name: '导入需求A',
+    description: '标准导入',
+    headers: [{ key: 'X-Imported', value: 'yes' }],
+  },
+  { id: 'req1', name: '冲突ID' },
+  { name: '需求2' },
+  { description: '缺少名称' },
+]);
+
+const IMPORT_CUSTOM_JSON = JSON.stringify({
+  items: [{ code: 'EXT-1', title: '脚本需求', lane: 'lane-x' }],
+});
+
+const IMPORT_CUSTOM_CODE = `return data.items.map((item) => ({
+  id: item.code,
+  name: item.title,
+  description: '来自自定义解析',
+  expiresAt: null,
+  headers: [{ key: 'X-Lane', value: item.lane }],
+}));`;
+
+async function reload(c) {
+  await c.send('Page.reload');
+  await sleep(1300);
+}
+
+const LEGACY_CONFIG = {
+  globalEnabled: true,
+  systems: [
+    {
+      id: 'legacy-sys',
+      name: '旧系统',
+      domains: ['old.acme.cn'],
+      enabled: true,
+      activeSchemeId: null,
+      schemes: [
+        {
+          id: 'legacy-req',
+          name: '旧需求',
+          description: '旧结构',
+          expiresAt: null,
+          headers: [{ id: 'legacy-pair', key: 'X-Old', value: '1' }],
+        },
+      ],
+    },
+  ],
+};
+
+function testConfig() {
+  const now = Date.now();
+  return {
+    version: 2,
+    globalEnabled: true,
+    requirements: [
+      {
+        id: 'req1',
+        name: '需求1',
+        description: '张三 - 购物车改版',
+        expiresAt: null,
+        createdAt: now - 3000,
+        headers: [{ id: 'p1', key: 'X-Lane', value: 'feature-cart-a' }],
+      },
+      {
+        id: 'req2',
+        name: '需求2',
+        description: '李四 - 结算优化',
+        expiresAt: null,
+        createdAt: now - 2000,
+        headers: [{ id: 'p2', key: 'X-Lane', value: 'feature-cart-b' }],
+      },
+      {
+        id: 'req3',
+        name: '需求3',
+        description: '共享 - 积分灰度',
+        expiresAt: null,
+        createdAt: now - 1000,
+        headers: [{ id: 'p3', key: 'X-Points', value: 'v2' }],
+      },
+    ],
+    systems: [
+      {
+        id: 'sys1',
+        name: '运营后台',
+        domains: ['admin.acme.cn', '*.admin.acme.cn'],
+        enabled: true,
+        requirementIds: ['req1', 'req2'],
+        activeRequirementId: null,
+      },
+      {
+        id: 'sys2',
+        name: '会员中心',
+        domains: ['admin.acme.cn'],
+        enabled: true,
+        requirementIds: ['req2', 'req3'],
+        activeRequirementId: null,
+      },
+    ],
+  };
 }
 
 async function main() {
@@ -176,330 +342,602 @@ async function main() {
       await sleep(500);
     }
     if (!up) throw new Error('浏览器启动超时');
-    await sleep(1500); // 等扩展初始化
+    await sleep(1500);
 
-    // 1. Popup 渲染（命中示例系统 admin.acme.cn）
-    const popup = await openPage('popup.html?__host=admin.acme.cn');
-    console.log('✓ 插件页面可访问:', await popup.eval('chrome.runtime.getManifest().name'));
-
-    const banners = await popup.eval(`document.querySelectorAll('.master').length`);
-    const systems = await popup.eval(`document.querySelectorAll('.system-card').length`);
-    const schemes = await popup.eval(`document.querySelectorAll('.scheme-row').length`);
-    const sampleVisible = await popup.eval(
-      `document.body.innerText.includes('运营后台') && document.body.innerText.includes('需求1') && document.body.innerText.includes('张三 - 购物车改版')`,
+    // 0. 旧结构配置：备份 + 重置为 v2 默认配置
+    const setup = await openPage('options.html');
+    await setup.eval(`chrome.storage.local.set({laneConfig: ${JSON.stringify(LEGACY_CONFIG)}})`);
+    await reload(setup);
+    const resetInfo = JSON.parse(
+      await setup.eval(
+        `Promise.all([
+           chrome.storage.local.get('laneConfig'),
+           chrome.storage.local.get('laneConfigLegacyBackup'),
+         ]).then(([a, b]) => JSON.stringify({
+           version: a.laneConfig?.version,
+           systems: a.laneConfig?.systems?.length,
+           requirements: a.laneConfig?.requirements?.length,
+           backupSystems: b.laneConfigLegacyBackup?.systems?.length ?? 0,
+         }))`,
+      ),
     );
     console.log(
-      `✓ Popup 渲染: 总开关=${banners === 1}, ${systems} 个系统, ${schemes} 个方案, 示例数据可见=${sampleVisible}`,
+      `✓ 旧配置重置: v${resetInfo.version}, ${resetInfo.systems} 个系统 / ${resetInfo.requirements} 个需求, 备份系统=${resetInfo.backupSystems}`,
     );
-    if (banners !== 1 || systems !== 1 || schemes !== 2 || !sampleVisible) {
-      throw new Error('Popup 渲染不符合预期');
+    if (
+      resetInfo.version !== 2 ||
+      resetInfo.systems !== 1 ||
+      resetInfo.requirements !== 2 ||
+      resetInfo.backupSystems !== 1
+    ) {
+      throw new Error('旧配置重置/备份不符合预期');
+    }
+    setup.close();
+
+    // 1. Popup 默认 Tab = 当前注入
+    const popup = await openPage('popup.html?__host=admin.acme.cn');
+    await sleep(400);
+    const defaultTab = await popup.eval(`document.querySelector('.tab.active')?.textContent ?? ''`);
+    const emptyInject = await popup.eval(
+      `document.body.innerText.includes('当前没有注入任何 Header')`,
+    );
+    console.log(`✓ Popup 默认 Tab: "${defaultTab}", 空注入提示=${emptyInject}`);
+    if (!defaultTab.includes('当前注入') || !emptyInject) {
+      throw new Error('Popup 默认 Tab 不是「当前注入」');
     }
 
-    // 2. 点击「需求1」→ ACTIVE + 存储写入 + DNR 规则
+    // 2. 切到系统 Tab → 关闭重开应记住
+    await realClick(popup, '.tab', 1);
+    await sleep(400);
+    const sysCards = await popup.eval(`document.querySelectorAll('.system-card').length`);
+    const schemeRows = await popup.eval(`document.querySelectorAll('.scheme-row').length`);
+    console.log(`✓ 系统 Tab: ${sysCards} 个系统, ${schemeRows} 个需求行`);
+    if (sysCards !== 1 || schemeRows !== 2) throw new Error('系统 Tab 渲染不符合预期');
+    popup.close();
+
+    const popup2 = await openPage('popup.html?__host=admin.acme.cn');
+    await sleep(500);
+    const restoredSystems = await popup2.eval(
+      `document.querySelector('.tab.active')?.textContent ?? ''`,
+    );
+    console.log(`✓ 重新打开记住上次 Tab: "${restoredSystems}"`);
+    if (!restoredSystems.includes('系统')) throw new Error('Popup 未记住上次 Tab');
+
+    // 3. 选择需求 → active + DNR
     await clickUntil(
-      popup,
+      popup2,
       '.scheme-row',
       `document.querySelectorAll('.scheme-row.active').length === 1`,
     );
-    console.log('  · 需求1 已选中 (ACTIVE)');
-    await sleep(800);
-
-    const stored = await popup.eval(
-      `chrome.storage.local.get('laneConfig').then(({laneConfig}) => ({
-         activeSchemeId: laneConfig.systems[0].activeSchemeId,
-         firstSchemeId: laneConfig.systems[0].schemes[0].id,
-       }))`,
+    await sleep(600);
+    const activeInfo = JSON.parse(
+      await popup2.eval(
+        `chrome.storage.local.get('laneConfig').then(({laneConfig}) => JSON.stringify({
+           active: laneConfig.systems[0].activeRequirementId,
+           first: laneConfig.systems[0].requirementIds[0],
+         }))`,
+      ),
     );
-    console.log(`✓ 存储写入: activeSchemeId === schemes[0].id → ${stored.activeSchemeId === stored.firstSchemeId}`);
-    if (stored.activeSchemeId !== stored.firstSchemeId) throw new Error('存储状态与预期不符');
-
-    const dnrCount = await waitDnrCount(popup, 1);
-    const rule = await popup
+    const dnrCount = await waitDnrCount(popup2, 1);
+    const rule = await popup2
       .eval(
         `new Promise(res => chrome.declarativeNetRequest.getDynamicRules(r => res(JSON.stringify(r[0] ?? null))))`,
       )
       .then((s) => JSON.parse(s));
     const header = rule?.action?.requestHeaders?.[0];
-    console.log(`✓ DNR 规则: ${dnrCount} 条, ${header?.header}=${header?.value}, 域名=${rule?.condition?.requestDomains?.join(',')}`);
+    console.log(
+      `✓ 选择需求: active=${activeInfo.active === activeInfo.first}, DNR ${dnrCount} 条, ${header?.header}=${header?.value}`,
+    );
+    if (activeInfo.active !== activeInfo.first) throw new Error('存储 activeRequirementId 不符合预期');
     if (dnrCount !== 1 || header?.header !== 'X-Lane' || header?.value !== 'feature-cart-a') {
       throw new Error('DNR 规则未正确生成');
     }
 
-    // 2.5 角标按当前站点显示：打开匹配域名的网页标签页后应显示 1
+    // 角标
     const webTab = await openPage('https://admin.acme.cn/');
-    const badge = await waitBadge(popup, '1');
+    const badge = await waitBadge(popup2, '1');
     console.log(`✓ 角标(admin.acme.cn 页签): "${badge}"`);
     if (badge !== '1') throw new Error('角标未按当前站点显示');
 
-    // 2.5 当前注入汇总：显示匹配系统的 Key=Value
-    const injectShown = await popup.eval(
+    // 4. 当前注入 Tab 内容 + 记忆
+    await realClick(popup2, '.tab', 0);
+    await sleep(400);
+    const injectShown = await popup2.eval(
       `document.body.innerText.includes('当前注入') && document.body.innerText.includes('X-Lane') && document.body.innerText.includes('feature-cart-a') && document.body.innerText.includes('运营后台')`,
     );
-    console.log(`✓ 当前注入汇总: ${injectShown}`);
+    console.log(`✓ 当前注入 Tab: ${injectShown}`);
     if (!injectShown) throw new Error('当前注入汇总未展示');
+    popup2.close();
 
-    // 3. 总开关关闭 → 规则清空；再开启 → 规则恢复
+    const popup3 = await openPage('popup.html?__host=admin.acme.cn');
+    await sleep(500);
+    const restoredInject = await popup3.eval(
+      `document.querySelector('.tab.active')?.textContent ?? ''`,
+    );
+    console.log(`✓ 再次打开记住「当前注入」: "${restoredInject}"`);
+    if (!restoredInject.includes('当前注入')) throw new Error('Popup 未记住「当前注入」Tab');
+    await realClick(popup3, '.tab', 1);
+    await sleep(400);
+
+    // 真实弹窗不是标签页：角标按「目标网站标签页」刷新，这里把它设为活动页
+    await popup3.eval(`chrome.tabs.query({}).then((tabs) => {
+      const tab = tabs.find((x) => x.url && x.url.startsWith('https://admin.acme.cn'));
+      return tab ? chrome.tabs.update(tab.id, { active: true }) : null;
+    })`);
+    await sleep(300);
+
+    // 5. 总开关 / 系统开关 / 取消-恢复
     await clickUntil(
-      popup,
+      popup3,
       '.master .switch input',
       `!document.querySelector('.master .switch input').checked`,
     );
-    const offCount = await waitDnrCount(popup, 0);
-    console.log(`✓ 总开关关闭后 DNR 规则: ${offCount} 条`);
-    if (offCount !== 0) throw new Error('总开关关闭后规则未清理');
-    const badgeOff = await waitBadge(popup, '');
-    console.log(`✓ 总开关关闭后角标: "${badgeOff}"`);
-    if (badgeOff !== '') throw new Error('总开关关闭后角标未清空');
-
+    const offCount = await waitDnrCount(popup3, 0);
+    const badgeOff = await waitBadge(popup3, '');
+    console.log(`✓ 总开关关闭: DNR ${offCount} 条, 角标 "${badgeOff}"`);
+    if (offCount !== 0 || badgeOff !== '') throw new Error('总开关关闭后未清理');
     await clickUntil(
-      popup,
+      popup3,
       '.master .switch input',
       `document.querySelector('.master .switch input').checked`,
     );
-    const onCount = await waitDnrCount(popup, 1);
-    console.log(`✓ 总开关重新开启后 DNR 规则: ${onCount} 条`);
-    if (onCount !== 1) throw new Error('总开关开启后规则未恢复');
-    const badgeOn = await waitBadge(popup, '1');
-    console.log(`✓ 总开关重新开启后角标: "${badgeOn}"`);
-    if (badgeOn !== '1') throw new Error('总开关开启后角标未恢复');
+    if ((await waitDnrCount(popup3, 1)) !== 1) throw new Error('总开关开启后规则未恢复');
 
-    // 3.5 系统级注入开关：关闭 → 规则清空；开启 → 恢复
     await clickUntil(
-      popup,
+      popup3,
       '.system-head .switch input',
       `!document.querySelector('.system-head .switch input').checked`,
     );
-    const sysOff = await waitDnrCount(popup, 0);
-    const badgeSysOff = await waitBadge(popup, '');
-    console.log(`✓ 系统开关关闭后 DNR 规则: ${sysOff} 条, 角标: "${badgeSysOff}"`);
-    if (sysOff !== 0 || badgeSysOff !== '') throw new Error('系统开关关闭后未清理');
-
+    if ((await waitDnrCount(popup3, 0)) !== 0) throw new Error('系统开关关闭后未清理');
     await clickUntil(
-      popup,
+      popup3,
       '.system-head .switch input',
       `document.querySelector('.system-head .switch input').checked`,
     );
-    const sysOn = await waitDnrCount(popup, 1);
-    const badgeSysOn = await waitBadge(popup, '1');
-    console.log(`✓ 系统开关重新开启后 DNR 规则: ${sysOn} 条, 角标: "${badgeSysOn}"`);
-    if (sysOn !== 1 || badgeSysOn !== '1') throw new Error('系统开关开启后未恢复');
+    if ((await waitDnrCount(popup3, 1)) !== 1) throw new Error('系统开关开启后未恢复');
 
-    // 4. 再次点击方案取消 → 规则清空
     await clickUntil(
-      popup,
+      popup3,
       '.scheme-row',
       `document.querySelectorAll('.scheme-row.active').length === 0`,
     );
-    const cleared = await waitDnrCount(popup, 0);
-    const badgeCleared = await waitBadge(popup, '');
-    console.log(`✓ 取消方案后 DNR 规则: ${cleared} 条, 角标: "${badgeCleared}"`);
-    if (cleared !== 0 || badgeCleared !== '') throw new Error('取消方案后 DNR 规则未清理');
-
-    // 5. 重新选中便于截图 → Popup 截图
+    if ((await waitDnrCount(popup3, 0)) !== 0) throw new Error('取消需求后未清理');
     await clickUntil(
-      popup,
+      popup3,
       '.scheme-row',
       `document.querySelectorAll('.scheme-row.active').length === 1`,
     );
-    const badgeReselect = await waitBadge(popup, '1');
-    console.log(`✓ 重新选中后角标: "${badgeReselect}"`);
-    if (badgeReselect !== '1') throw new Error('重新选中后角标未恢复');
-    await sleep(800);
-    await screenshot(popup, 'smoke-popup.png');
+    if ((await waitDnrCount(popup3, 1)) !== 1) throw new Error('恢复需求后未注入');
 
-    // 6. 方案过期：ACTIVE 方案过期后不再注入、且不在弹窗展示
-    await popup.eval(`(async () => {
+    // 6. 需求过期 → 停止注入并从弹窗隐藏
+    await popup3.eval(`(async () => {
       const {laneConfig} = await chrome.storage.local.get('laneConfig');
       const sys = laneConfig.systems[0];
-      const active = sys.schemes.find((s) => s.id === sys.activeSchemeId);
-      active.expiresAt = '2020-01-01T00:00';
+      const req = laneConfig.requirements.find((r) => r.id === sys.activeRequirementId);
+      req.expiresAt = '2020-01-01T00:00';
       await chrome.storage.local.set({laneConfig});
       await browser.runtime.sendMessage({type:'sync-dnr'});
       return 'ok';
     })()`);
     await sleep(1200);
-    const expiredRows = await popup.eval(`document.querySelectorAll('.scheme-row').length`);
-    const expiredDnr = await waitDnrCount(popup, 0);
-    const expiredHidden = await popup.eval(
+    const expiredRows = await popup3.eval(`document.querySelectorAll('.scheme-row').length`);
+    const expiredDnr = await waitDnrCount(popup3, 0);
+    const expiredHidden = await popup3.eval(
       `!document.body.innerText.includes('张三 - 购物车改版') && document.body.innerText.includes('需求2')`,
     );
-    console.log(
-      `✓ 方案过期: 可见方案 ${expiredRows} 个(剩1), DNR ${expiredDnr} 条, 过期方案已隐藏=${expiredHidden}`,
-    );
+    console.log(`✓ 需求过期: 可见行 ${expiredRows}, DNR ${expiredDnr}, 已隐藏=${expiredHidden}`);
     if (expiredRows !== 1 || expiredDnr !== 0 || !expiredHidden) {
       throw new Error('过期逻辑不符合预期');
     }
-    popup.close();
-
-    // 7. 未匹配域名 → 快捷创建系统
-    const popup2 = await openPage('popup.html?__host=unknown.acme.test');
-    const noMatch = await popup2.eval(`document.body.innerText.includes('未匹配到系统')`);
-    console.log(`✓ 未匹配提示可见=${noMatch}`);
-    if (!noMatch) throw new Error('未匹配提示未出现');
-    await popup2.eval(`(() => {
-      const el = document.querySelector('.qc-name');
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-      setter.call(el, '数据平台');
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      return 'ok';
-    })()`);
-    await realClick(popup2, '.qc-create');
-    await sleep(800);
-    const qcSystems = await popup2.eval(
-      `chrome.storage.local.get('laneConfig').then(({laneConfig}) => laneConfig.systems.length)`,
-    );
-    const qcVisible = await popup2.eval(`document.querySelectorAll('.system-card').length`);
-    console.log(`✓ 快捷创建: storage ${qcSystems} 个系统, 页面显示 ${qcVisible} 张系统卡片`);
-    if (qcSystems !== 2 || qcVisible !== 1) throw new Error('快捷创建未生效');
-    popup2.close();
-
-    // 8. Key 冲突检测：两个系统同域名 + 同 Key 注入 → 弹窗提示冲突并列出 Key
-    const popup3 = await openPage('popup.html?__host=admin.acme.cn');
     await popup3.eval(`(async () => {
       const {laneConfig} = await chrome.storage.local.get('laneConfig');
-      const sys0 = laneConfig.systems[0];
-      // 恢复过期用例中系统1的方案有效期，使其恢复注入
-      sys0.schemes.find((s) => s.id === sys0.activeSchemeId).expiresAt = null;
-      const sys = laneConfig.systems[1]; // 快捷创建的系统（无默认方案，补一个）
+      for (const r of laneConfig.requirements) r.expiresAt = null;
+      await chrome.storage.local.set({laneConfig});
+      await browser.runtime.sendMessage({type:'sync-dnr'});
+      return 'ok';
+    })()`);
+    await sleep(800);
+    await screenshot(popup3, 'smoke-popup.png');
+    popup3.close();
+
+    // 7. 未匹配域名 → 快捷创建系统
+    const popup4 = await openPage('popup.html?__host=unknown.acme.test');
+    await sleep(500);
+    const noMatch = await popup4.eval(`document.body.innerText.includes('未匹配到系统')`);
+    if (!noMatch) throw new Error('未匹配提示未出现');
+    await setInput(popup4, '.qc-name', '数据平台');
+    await realClick(popup4, '.qc-create');
+    await sleep(900);
+    const qcConfig = await getConfig(popup4);
+    const qcVisible = await popup4.eval(`document.querySelectorAll('.system-card').length`);
+    console.log(`✓ 快捷创建: ${qcConfig.systems.length} 个系统, 页面显示 ${qcVisible} 张卡片`);
+    if (qcConfig.systems.length !== 2 || qcVisible !== 1) throw new Error('快捷创建未生效');
+    popup4.close();
+
+    // 8. 冲突检测（两个系统注入同一 Header Key）
+    const popup5 = await openPage('popup.html?__host=admin.acme.cn');
+    await popup5.eval(`(async () => {
+      const {laneConfig} = await chrome.storage.local.get('laneConfig');
+      const sys = laneConfig.systems[1];
       sys.domains = ['admin.acme.cn'];
-      sys.schemes.push({id: 'sc9', name: '需求X', description: '', expiresAt: null,
-        headers: [{id: 'p9', key: 'X-Lane', value: 'other-lane'}]});
-      sys.activeSchemeId = 'sc9';
+      laneConfig.requirements.push({
+        id: 'conflict-req', name: '需求X', description: '', expiresAt: null,
+        createdAt: Date.now(), headers: [{ id: 'conflict-pair', key: 'X-Lane', value: 'other-lane' }],
+      });
+      sys.requirementIds = ['conflict-req'];
+      sys.activeRequirementId = 'conflict-req';
       await chrome.storage.local.set({laneConfig});
       await browser.runtime.sendMessage({type:'sync-dnr'});
       return 'ok';
     })()`);
     await sleep(1200);
-    const conflictShown = await popup3.eval(
+    const conflictShown = await popup5.eval(
       `document.body.innerText.includes('可能存在 Header 冲突') && document.body.innerText.includes('X-Lane')`,
     );
-    const conflictDnr = await popup3.eval(
+    const conflictDnr = await popup5.eval(
       `new Promise(res => chrome.declarativeNetRequest.getDynamicRules(r => res(r.length)))`,
     );
-    console.log(`✓ 冲突检测: 提示可见=${conflictShown}, DNR 规则 ${conflictDnr} 条(两系统各1条)`);
+    console.log(`✓ 冲突检测: 提示=${conflictShown}, DNR ${conflictDnr} 条`);
     if (!conflictShown || conflictDnr !== 2) throw new Error('冲突检测不符合预期');
-    await screenshot(popup3, 'smoke-popup-conflict.png');
-    popup3.close();
+    await screenshot(popup5, 'smoke-popup-conflict.png');
+    popup5.close();
 
-    // 9. Options 页渲染 + 截图
+    // ---------- 设置页 ----------
     const options = await openPage('options.html');
-    let sysItemReady = false;
-    for (let i = 0; i < 12; i++) {
-      sysItemReady = await options.eval(`!!document.querySelector('.scheme-delete')`);
-      if (sysItemReady) break;
-      await sleep(500);
-    }
-    const optionOk = await options.eval(
-      `document.body.innerText.includes('HeaderKeeper') && document.body.innerText.includes('添加系统') && document.body.innerText.includes('HEADER KEY') && document.body.innerText.includes('过期时间')`,
+    await options.eval(
+      `chrome.storage.local.set({laneConfig: ${JSON.stringify(testConfig())}}).then(() => 'ok')`,
     );
-    console.log(`✓ Options 页渲染正常=${optionOk}`);
-    if (!optionOk || !sysItemReady) throw new Error('Options 页渲染不符合预期');
+    await sync(options);
+    await reload(options);
+    await sleep(500);
 
-    // 10. 添加系统表单：名称/域名必填校验 + 名称唯一校验 + 创建
-    await realClick(options, '.add-sys');
-    await sleep(400);
-    const formShown = await options.eval(`!!document.querySelector('.add-form')`);
-    await realClick(options, '.add-form .btn.primary'); // 空表单直接提交
-    await sleep(300);
-    const errRequired = await options.eval(`document.body.innerText.includes('系统名称必填')`);
-    // 重名校验：填已存在的名称
-    await options.eval(`(() => {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-      const inputs = document.querySelectorAll('.add-form input');
-      setter.call(inputs[0], '运营后台');
-      inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
-      setter.call(inputs[1], 'new1.acme.cn');
-      inputs[1].dispatchEvent(new Event('input', { bubbles: true }));
-      return 'ok';
-    })()`);
-    await realClick(options, '.add-form .btn.primary');
-    await sleep(300);
-    const errDuplicate = await options.eval(`document.body.innerText.includes('系统名称已存在')`);
-    const countBeforeCreate = await options.eval(
-      `chrome.storage.local.get('laneConfig').then(({laneConfig}) => laneConfig.systems.length)`,
+    let sysRows = await options.eval(`document.querySelectorAll('.sys-row').length`);
+    let navItems = await options.eval(`document.querySelectorAll('.nav-item').length`);
+    console.log(`✓ 设置页: ${sysRows} 个系统行, ${navItems} 个导航项`);
+    if (sysRows !== 2 || navItems !== 4) throw new Error('设置页渲染不符合预期');
+    await screenshot(options, 'smoke-options.png');
+
+    // 9. 系统详情：改名 + 多域名
+    await options.eval(`document.querySelectorAll('.sys-row')[0]?.click()`);
+    await sleep(500);
+    const detailShown = await options.eval(
+      `!!document.querySelector('.system-detail') && document.querySelector('.system-name-field input')?.value === '运营后台'`,
     );
-    // 改为唯一名称后创建
-    await options.eval(`(() => {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-      const nameInput = document.querySelector('.add-form input');
-      setter.call(nameInput, '验收系统');
-      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-      return 'ok';
-    })()`);
-    await realClick(options, '.add-form .btn.primary');
+    if (!detailShown) throw new Error('系统详情未打开');
+    await setInput(options, '.system-name-field input', '运营后台A');
+    await blur(options, '.system-name-field input');
+    await sleep(600);
+    let cfg = await getConfig(options);
+    if (cfg.systems[0].name !== '运营后台A') throw new Error('系统改名未生效');
+
+    await setInput(options, '.system-domains-field .domain-add input', '*.test.acme.cn');
+    await realClick(options, '.system-domains-field .domain-add .btn');
+    await sleep(600);
+    cfg = await getConfig(options);
+    if (cfg.systems[0].domains.length !== 3) throw new Error('域名添加未生效');
+    await realClick(options, '.system-domains-field .domain-chip .domain-remove', 0);
+    await sleep(600);
+    cfg = await getConfig(options);
+    if (cfg.systems[0].domains.length !== 2) throw new Error('域名移除未生效');
+    console.log(`✓ 系统详情: 名称=${cfg.systems[0].name}, 域名 ${cfg.systems[0].domains.join(' / ')}`);
+    await screenshot(options, 'smoke-system-detail.png');
+
+    // 10. 新建需求（弹窗，自动关联当前系统）
+    await realClick(options, '.req-toolbar-actions .btn.primary');
+    if (!(await waitFor(options, `!!document.querySelector('.req-form-modal')`))) {
+      throw new Error('新建需求弹窗未打开');
+    }
+    await setInput(options, '.req-form-modal input[type="text"]', '新建共享需求', 0);
+    await setInput(options, '.req-form-modal input[type="text"]', '测试用', 1);
+    await realClick(options, '.req-form-modal .btn.primary');
     await sleep(800);
-    const addSysCount = await options.eval(
-      `chrome.storage.local.get('laneConfig').then(({laneConfig}) => laneConfig.systems.length)`,
+    cfg = await getConfig(options);
+    const newReq = cfg.requirements.find((r) => r.name === '新建共享需求');
+    const sysAfterCreate = cfg.systems.find((s) => s.id === 'sys1');
+    console.log(
+      `✓ 新建需求: 需求 ${cfg.requirements.length} 个, 系统引用 ${sysAfterCreate.requirementIds.length} 个, 已关联=${sysAfterCreate.requirementIds.includes(newReq?.id)}`,
     );
-    const addSysName = await options.eval(
-      `chrome.storage.local.get('laneConfig').then(({laneConfig}) => laneConfig.systems[2]?.name)`,
+    if (!newReq || !sysAfterCreate.requirementIds.includes(newReq.id)) {
+      throw new Error('新建需求/关联未生效');
+    }
+
+    // 11. 关联已有需求 → 解除引用
+    await realClick(options, '.req-toolbar-actions .btn', 0);
+    await sleep(400);
+    const pickerItems = await options.eval(`document.querySelectorAll('.modal-item').length`);
+    if (pickerItems !== 1) throw new Error(`关联弹窗候选数量不符合预期: ${pickerItems}`);
+    await realClick(options, '.modal-item .btn', 0);
+    await sleep(700);
+    cfg = await getConfig(options);
+    const sysAfterLink = cfg.systems.find((s) => s.id === 'sys1');
+    if (!sysAfterLink.requirementIds.includes('req3')) throw new Error('关联已有需求未生效');
+    console.log(`✓ 关联已有需求: 系统引用 ${sysAfterLink.requirementIds.length} 个`);
+
+    await realClick(options, '.req-remove', 0);
+    await sleep(700);
+    cfg = await getConfig(options);
+    const sysAfterUnlink = cfg.systems.find((s) => s.id === 'sys1');
+    if (sysAfterUnlink.requirementIds.length !== sysAfterLink.requirementIds.length - 1) {
+      throw new Error('移出本系统未生效');
+    }
+    console.log(`✓ 移出本系统: 剩余引用 ${sysAfterUnlink.requirementIds.length} 个`);
+
+    // 12. 需求管理：数量 / 排序 / 引用 / 筛选 / 内联编辑
+    await options.eval(`document.querySelectorAll('.nav-item')[2]?.click()`);
+    await sleep(600);
+    const reqCards = await options.eval(`document.querySelectorAll('.requirement-card').length`);
+    const sharedShown = await options.eval(
+      `document.body.innerText.includes('共享 · 2 个系统') && document.body.innerText.includes('会员中心')`,
+    );
+    console.log(`✓ 需求管理: ${reqCards} 张卡片, 共享引用展示=${sharedShown}`);
+    if (reqCards !== 4 || !sharedShown) throw new Error('需求管理渲染不符合预期');
+    await screenshot(options, 'smoke-requirements.png');
+
+    // 名称筛选
+    await setInput(options, '.filters .filter-input', '需求3', 0);
+    await sleep(400);
+    let filtered = await options.eval(`document.querySelectorAll('.requirement-card').length`);
+    if (filtered !== 1) throw new Error(`名称筛选结果不符合预期: ${filtered}`);
+    await realClick(options, '.filter-clear');
+    await sleep(400);
+
+    // Header 值筛选
+    await setInput(options, '.filters .filter-input', 'feature-cart-b', 1);
+    await sleep(400);
+    filtered = await options.eval(`document.querySelectorAll('.requirement-card').length`);
+    if (filtered !== 1) throw new Error(`Header 值筛选结果不符合预期: ${filtered}`);
+    await realClick(options, '.filter-clear');
+    await sleep(400);
+
+    // 过期状态筛选：把第一张卡片设为已过期，再用下拉筛选
+    await setInput(options, '.requirement-card .expire-input', '2020-01-01T00:00', 0);
+    await sleep(700);
+    await setSelect(options, '.filter-select select', 'expired');
+    await sleep(400);
+    const expiredFiltered = await options.eval(
+      `document.querySelectorAll('.requirement-card').length`,
+    );
+    await setSelect(options, '.filter-select select', 'valid');
+    await sleep(400);
+    const validFiltered = await options.eval(
+      `document.querySelectorAll('.requirement-card').length`,
+    );
+    console.log(`✓ 过期筛选: 已过期 ${expiredFiltered} 张, 未过期 ${validFiltered} 张`);
+    if (expiredFiltered !== 1 || validFiltered !== 3) {
+      throw new Error('过期状态筛选不符合预期');
+    }
+    await setSelect(options, '.filter-select select', 'all');
+    await sleep(400);
+
+    // 内联改名
+    await setInput(options, '.requirement-card .scheme-name', '改名需求', 0);
+    await sleep(700);
+    cfg = await getConfig(options);
+    if (!cfg.requirements.some((r) => r.name === '改名需求')) {
+      throw new Error('需求内联改名未生效');
+    }
+    console.log('✓ 需求内联编辑');
+
+    // 12.5 需求导入：标准 JSON
+    await realClick(options, '.page-actions-actions .btn', 0);
+    if (!(await waitFor(options, `!!document.querySelector('.import-modal')`))) {
+      throw new Error('导入弹窗未打开');
+    }
+    await sleep(600);
+    await setInput(options, '.import-textarea', IMPORT_STANDARD_JSON, 0);
+    await realClick(options, '.import-toolbar .btn');
+    await waitImportParsed(options);
+    const importSummary = await options.eval(
+      `document.querySelector('.import-summary')?.innerText ?? ''`,
+    );
+    const importConflicts = await options.eval(
+      `document.querySelectorAll('.import-conflict').length`,
+    );
+    const importInvalid = await options.eval(
+      `document.querySelectorAll('.import-invalid-item').length`,
     );
     console.log(
-      `✓ 添加系统: 表单=${formShown}, 必填报错=${errRequired}, 重名报错=${errDuplicate}(数量仍 ${countBeforeCreate}), 创建后 ${addSysCount} 个系统(名称=${addSysName})`,
+      `✓ 标准导入预览: ${importSummary.replace(/\n/g, ' / ')}, 冲突 ${importConflicts}, 无效 ${importInvalid}`,
     );
     if (
-      !formShown || !errRequired || !errDuplicate || countBeforeCreate !== 2 ||
-      addSysCount !== 3 || addSysName !== '验收系统'
+      !importSummary.includes('可导入 1 条') ||
+      importConflicts !== 2 ||
+      importInvalid !== 1
     ) {
-      throw new Error('添加系统流程不符合预期');
+      throw new Error('标准导入预览不符合预期');
     }
-
-    // 11. 添加方案表单：名称/描述必填 + 创建
-    await realClick(options, '.add-scheme');
+    await realClick(options, '.import-actions .btn.primary');
+    await sleep(900);
+    const standardImportResult = await options.eval(
+      `document.querySelector('.import-result')?.textContent ?? ''`,
+    );
+    cfg = await getConfig(options);
+    console.log(
+      `✓ 标准导入: ${standardImportResult}, 需求 ${cfg.requirements.length} 个`,
+    );
+    if (
+      !standardImportResult.includes('已导入 1 条') ||
+      cfg.requirements.length !== 5
+    ) {
+      throw new Error('标准导入结果不符合预期');
+    }
+    await realClick(options, '.import-actions .btn.primary');
     await sleep(400);
-    const schemeFormShown = await options.eval(`!!document.querySelector('.add-form-scheme')`);
-    await realClick(options, '.add-form-scheme .btn.primary'); // 空表单直接提交
-    await sleep(300);
-    const schemeErr = await options.eval(`document.body.innerText.includes('需求名称必填')`);
-    await options.eval(`(() => {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-      const nameInput = document.querySelector('.add-form-scheme .scheme-name');
-      setter.call(nameInput, '需求1');
-      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-      return 'ok';
-    })()`);
-    await realClick(options, '.add-form-scheme .btn.primary');
-    await sleep(800);
-    const schemeInfo = JSON.parse(
-      await options.eval(
-        `chrome.storage.local.get('laneConfig').then(({laneConfig}) => {
-           const s = laneConfig.systems[2].schemes[0];
-           return JSON.stringify({name: s?.name, desc: s?.description});
-         })`,
-      ),
+
+    // 12.6 需求导入：自定义 JS 解析（沙箱执行）
+    await realClick(options, '.page-actions-actions .btn', 0);
+    if (!(await waitFor(options, `!!document.querySelector('.import-modal')`))) {
+      throw new Error('导入弹窗未打开');
+    }
+    await sleep(700);
+    await realClick(options, '.import-mode button', 1);
+    await sleep(200);
+    await setInput(options, '.import-textarea', IMPORT_CUSTOM_JSON, 0);
+    await setInput(options, '.import-code', IMPORT_CUSTOM_CODE, 0);
+    await realClick(options, '.import-toolbar .btn');
+    await waitImportParsed(options);
+    await realClick(options, '.import-actions .btn.primary');
+    await sleep(900);
+    const customImportResult = await options.eval(
+      `document.querySelector('.import-result')?.textContent ?? ''`,
+    );
+    cfg = await getConfig(options);
+    const scriptedRequirement = cfg.requirements.find((r) => r.id === 'EXT-1');
+    console.log(
+      `✓ 自定义导入: ${customImportResult}, 脚本需求=${scriptedRequirement?.name}, Header=${scriptedRequirement?.headers?.[0]?.value}`,
+    );
+    if (
+      !customImportResult.includes('已导入 1 条') ||
+      !scriptedRequirement ||
+      scriptedRequirement.headers[0]?.key !== 'X-Lane' ||
+      scriptedRequirement.headers[0]?.value !== 'lane-x'
+    ) {
+      throw new Error('自定义导入结果不符合预期');
+    }
+    if (cfg.requirements.length !== 6) throw new Error('自定义导入后需求数量不符合预期');
+    await realClick(options, '.import-actions .btn.primary');
+    await sleep(400);
+
+    // 12.7 唯一键冲突（id）→ 跳过且不可导入
+    await realClick(options, '.page-actions-actions .btn', 0);
+    if (!(await waitFor(options, `!!document.querySelector('.import-modal')`))) {
+      throw new Error('导入弹窗未打开');
+    }
+    await sleep(700);
+    await realClick(options, '.import-mode button', 1);
+    await sleep(200);
+    await setInput(options, '.import-textarea', IMPORT_CUSTOM_JSON, 0);
+    await setInput(options, '.import-code', IMPORT_CUSTOM_CODE, 0);
+    await realClick(options, '.import-toolbar .btn');
+    await waitImportParsed(options);
+    const duplicateConflict = await options.eval(
+      `document.querySelector('.import-conflict')?.textContent ?? ''`,
+    );
+    const duplicateDisabled = await options.eval(
+      `document.querySelector('.import-actions .btn.primary')?.disabled ?? false`,
     );
     console.log(
-      `✓ 添加方案: 表单=${schemeFormShown}, 空提交报错=${schemeErr}, 创建方案=${schemeInfo.name}/描述可为空(${schemeInfo.desc === ''})`,
+      `✓ 重复导入唯一键冲突: ${duplicateConflict}, 导入按钮禁用=${duplicateDisabled}`,
     );
-    if (!schemeFormShown || !schemeErr || schemeInfo.name !== '需求1' || schemeInfo.desc !== '') {
-      throw new Error('添加方案流程不符合预期');
+    if (!duplicateConflict.includes('EXT-1') || !duplicateDisabled) {
+      throw new Error('唯一键冲突未正确阻止导入');
     }
-
-    // 12. 删除选中的系统：两段式确认 + 自动选中上一个系统
-    await realClick(options, '.sys-item', 1); // 选中第二个系统（数据平台）
+    await realClick(options, '.import-modal .modal-head .icon-btn');
     await sleep(400);
-    await realClick(options, '.sys-delete');
-    await sleep(300);
+
+    // 删除被两个系统引用的共享需求
+    const sharedIndex = await options.eval(
+      `[...document.querySelectorAll('.requirement-card')].findIndex(
+         (c) => c.querySelector('.scheme-name')?.value === '需求2')`,
+    );
+    if (sharedIndex < 0) throw new Error('未找到共享需求卡片');
+    await realClick(options, '.requirement-card .req-delete', sharedIndex);
+    await sleep(400);
+    const warning = await options.eval(
+      `document.querySelector('.req-delete-warning')?.textContent ?? ''`,
+    );
+    if (!warning.includes('2 个系统')) throw new Error(`删除警告不符合预期: ${warning}`);
+    await realClick(options, '.requirement-card .req-delete', sharedIndex);
+    await sleep(900);
+    cfg = await getConfig(options);
+    const req2Gone =
+      !cfg.requirements.some((r) => r.id === 'req2') &&
+      cfg.systems.every((s) => !s.requirementIds.includes('req2'));
+    console.log(`✓ 删除共享需求: 需求剩 ${cfg.requirements.length} 个, 引用已清理=${req2Gone}`);
+    if (!req2Gone) throw new Error('删除共享需求后引用未清理');
+
+    // 13. 删除系统（共享需求保留）
+    const reqCountBeforeSystemDelete = cfg.requirements.length;
+    await options.eval(`document.querySelectorAll('.nav-item')[1]?.click()`);
+    await sleep(600);
+    await realClick(options, '.sys-row-delete', 1);
+    await sleep(400);
     const sysConfirming = await options.eval(
-      `document.querySelector('.sys-delete')?.textContent.includes('确认删除')`,
+      `!!document.querySelector('.sys-row-delete.confirming')`,
     );
-    await realClick(options, '.sys-delete'); // 二次确认删除
-    await sleep(800);
-    const afterDelCount = await options.eval(
-      `chrome.storage.local.get('laneConfig').then(({laneConfig}) => laneConfig.systems.length)`,
-    );
-    const prevSelected = await options.eval(
-      `document.querySelector('.sys-item-wrap.selected .sys-item-name')?.textContent`,
-    );
+    await realClick(options, '.sys-row-delete', 1);
+    await sleep(900);
+    cfg = await getConfig(options);
     console.log(
-      `✓ 删除系统: 确认态=${sysConfirming}, 剩余 ${afterDelCount} 个系统, 自动选中上一个=${prevSelected} (应为 运营后台)`,
+      `✓ 删除系统: 确认态=${sysConfirming}, 系统剩 ${cfg.systems.length} 个, 需求保留 ${cfg.requirements.length} 个`,
     );
-    if (!sysConfirming || afterDelCount !== 2 || prevSelected !== '运营后台') {
-      throw new Error('删除系统流程不符合预期');
+    if (sysConfirming !== true || cfg.systems.length !== 1) {
+      throw new Error('删除系统未生效');
+    }
+    if (cfg.requirements.length !== reqCountBeforeSystemDelete) {
+      throw new Error('删除系统不应删除共享需求');
     }
 
-    await screenshot(options, 'smoke-options.png');
+    // 13.5 新建系统弹窗 + 详情页红字删除
+    await realClick(options, '.page-actions .btn.primary');
+    if (!(await waitFor(options, `!!document.querySelector('.system-form-modal')`))) {
+      throw new Error('新建系统弹窗未打开');
+    }
+    await setInput(options, '.system-form-modal input[type="text"]', '模态系统', 0);
+    await setInput(options, '.system-form-modal .domain-add input', 'modal.acme.cn', 0);
+    await sleep(200);
+    await realClick(options, '.system-form-modal .domain-add .btn');
+    await sleep(200);
+    await realClick(options, '.system-form-modal .btn.primary');
+    await sleep(900);
+    cfg = await getConfig(options);
+    const modalSystem = cfg.systems.find((s) => s.name === '模态系统');
+    const modalDetailShown = await options.eval(
+      `!!document.querySelector('.system-detail') && document.querySelector('.system-name-field input')?.value === '模态系统'`,
+    );
+    console.log(
+      `✓ 新建系统弹窗: 系统 ${cfg.systems.length} 个, 域名=${modalSystem?.domains.join(',')}, 已进入详情=${modalDetailShown}`,
+    );
+    if (!modalSystem || !modalDetailShown || modalSystem.domains[0] !== 'modal.acme.cn') {
+      throw new Error('新建系统弹窗流程不符合预期');
+    }
+
+    await realClick(options, '.system-info-foot .link-btn.danger');
+    await sleep(300);
+    const detailDeleteConfirming = await options.eval(
+      `document.querySelector('.system-info-foot .link-btn.danger')?.textContent.includes('确认删除')`,
+    );
+    await realClick(options, '.system-info-foot .link-btn.danger');
+    await sleep(900);
+    cfg = await getConfig(options);
+    const backToList = await options.eval(`document.querySelectorAll('.sys-row').length`);
+    console.log(
+      `✓ 详情页红字删除: 确认态=${detailDeleteConfirming}, 系统剩 ${cfg.systems.length} 个, 列表行 ${backToList}`,
+    );
+    if (!detailDeleteConfirming || cfg.systems.length !== 1 || backToList !== 1) {
+      throw new Error('详情页删除系统流程不符合预期');
+    }
+
+    // 14. 常规设置 / 关于 / 深链
+    await options.eval(`document.querySelectorAll('.nav-item')[0]?.click()`);
+    await sleep(400);
+    await realClick(options, '.lang-toggle button', 1);
+    await sleep(600);
+    const english = await options.eval(`document.body.innerText.includes('Interface language')`);
+    await realClick(options, '.lang-toggle button', 0);
+    await sleep(600);
+    const chinese = await options.eval(`document.body.innerText.includes('界面语言')`);
+    console.log(`✓ 语言切换: EN=${english}, 中文=${chinese}`);
+    if (!english || !chinese) throw new Error('语言切换未生效');
+
+    await options.eval(`document.querySelectorAll('.nav-item')[3]?.click()`);
+    await sleep(400);
+    const aboutShown = await options.eval(
+      `document.body.innerText.includes('Manifest V3') && document.body.innerText.includes('handsometaoa')`,
+    );
+    console.log(`✓ 关于页: ${aboutShown}`);
+    if (!aboutShown) throw new Error('关于页渲染不符合预期');
+    await screenshot(options, 'smoke-about.png');
     options.close();
+
+    const deep = await openPage('options.html?system=sys1');
+    await sleep(900);
+    const deepShown = await deep.eval(
+      `!!document.querySelector('.system-detail') && document.querySelector('.system-name-field input')?.value === '运营后台A'`,
+    );
+    console.log(`✓ 深链定位系统详情: ${deepShown}`);
+    if (!deepShown) throw new Error('深链未定位到系统详情');
+    deep.close();
 
     console.log('全部通过 ✅');
   } finally {

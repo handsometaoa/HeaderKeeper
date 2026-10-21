@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>HeaderKeeper Sandbox</title>
+  </head>
+  <body>
+    <script>
+      // 隔离沙箱：无插件 API / DOM 访问权限，仅执行用户编写的解析代码。
+      // 结果通过 postMessage 回传，并在沙箱内做一次 JSON 序列化，避免不可克隆对象。
+      (function () {
+        const post = (payload) => parent.postMessage(payload, '*');
+
+        window.addEventListener('message', async (event) => {
+          const msg = event.data;
+          if (!msg) return;
+          if (msg.type === 'hk-ping') {
+            post({ type: 'hk-sandbox-ready' });
+            return;
+          }
+          if (msg.type !== 'hk-eval' || typeof msg.id !== 'string') return;
+          const { id, data, code } = msg;
+          try {
+            const fn = new Function('data', String(code ?? ''));
+            let result = fn(data);
+            if (result && typeof result.then === 'function') result = await result;
+            const safe = result === undefined ? null : JSON.parse(JSON.stringify(result));
+            post({ type: 'hk-eval-result', id, ok: true, result: safe });
+          } catch (error) {
+            post({
+              type: 'hk-eval-result',
+              id,
+              ok: false,
+              error: error && error.message ? String(error.message) : String(error),
+            });
+          }
+        });
+
+        post({ type: 'hk-sandbox-ready' });
+      })();
+    </script>
+  </body>
+</html>

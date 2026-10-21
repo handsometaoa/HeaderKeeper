@@ -1,6 +1,6 @@
 {
   "name": "header-keeper",
-  "description": "按域名匹配系统，每个系统维护多个需求注入方案（泳道），一键切换重写请求 Header",
+  "description": "按域名匹配系统，系统引用共享需求库中的需求（泳道），一键切换重写请求 Header",
   "private": true,
   "version": "0.2.1",
   "author": {

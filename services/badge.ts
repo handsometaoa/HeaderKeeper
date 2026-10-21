@@ -1,6 +1,6 @@
 import { browser } from '#imports';
 import { matchSystems } from '@/lib/domains';
-import { schemeExpired } from '@/lib/schemes';
+import { activeInjectableRequirement } from '@/lib/requirements';
 import { loadConfig } from '@/services/store';
 
 /** 从 URL 提取域名（非 http/https 返回 null） */
@@ -23,15 +23,15 @@ export function countHeadersForHost(
   let count = 0;
   for (const system of matchSystems(config.systems, host)) {
     if (system.enabled === false) continue;
-    const scheme = system.schemes.find((s) => s.id === system.activeSchemeId);
-    if (!scheme || schemeExpired(scheme)) continue;
-    count += scheme.headers.filter((h) => h.key.trim() && h.value.trim()).length;
+    const requirement = activeInjectableRequirement(config, system);
+    if (!requirement) continue;
+    count += requirement.headers.filter((h) => h.key.trim() && h.value.trim()).length;
   }
   return count;
 }
 
 async function setBadge(text: string) {
-  await browser.action.setBadgeBackgroundColor({ color: '#e8502a' });
+  await browser.action.setBadgeBackgroundColor({ color: '#64765c' });
   await browser.action.setBadgeText({ text });
 }
 

@@ -1,6 +1,6 @@
 import type { LaneConfig } from './types';
 import { domainBase } from './domains';
-import { schemeExpired } from './schemes';
+import { activeInjectableRequirement } from './requirements';
 
 const ALL_RESOURCE_TYPES = [
   'main_frame',
@@ -41,7 +41,7 @@ export interface DnrRule {
 
 /**
  * 把用户配置转换成 declarativeNetRequest 动态规则。
- * - 每个系统取其 ACTIVE 的方案生成一条规则；无 ACTIVE 方案或键值不全的系统跳过
+ * - 每个系统取其使用中的共享需求生成一条规则；无使用中需求或键值不全的系统跳过
  * - 系统列表越靠后 priority 越高（后配置的系统覆盖前面同名 Header）
  */
 export function buildDnrRules(config: LaneConfig): DnrRule[] {
@@ -57,12 +57,12 @@ export function buildDnrRules(config: LaneConfig): DnrRule[] {
       .map((d) => domainBase(d))
       .filter((d): d is string => d !== null);
     if (domains.length === 0) continue;
-    const scheme = system.schemes.find((s) => s.id === system.activeSchemeId);
-    // 无 ACTIVE 方案或方案已过期：不注入
-    if (!scheme || schemeExpired(scheme)) continue;
+    const requirement = activeInjectableRequirement(config, system);
+    // 无使用中需求或需求已过期：不注入
+    if (!requirement) continue;
 
     const headers = new Map<string, string>();
-    for (const pair of scheme.headers) {
+    for (const pair of requirement.headers) {
       const key = pair.key.trim();
       if (!key || !pair.value.trim()) continue;
       headers.set(key, pair.value);
