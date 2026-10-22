@@ -1,13 +1,15 @@
 import { useState } from 'react';
+import { deleteRequirement } from '@/lib/ops';
 import {
   emptyRequirementFilter,
   filterRequirements,
   sortRequirementsDesc,
   systemsReferencing,
 } from '@/lib/requirements';
-import type { LaneConfig } from '@/lib/types';
+import type { LaneConfig, Requirement } from '@/lib/types';
 import type { T } from '@/lib/i18n';
 import type { Update } from '@/hooks/useLaneConfig';
+import { ConfirmModal } from './ConfirmModal';
 import { RequirementCard } from './RequirementCard';
 import { RequirementFilters } from './RequirementFilters';
 import { RequirementFormModal } from './RequirementFormModal';
@@ -27,9 +29,13 @@ export function RequirementsPanel({
   const [filters, setFilters] = useState(emptyRequirementFilter);
   const [importOpen, setImportOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Requirement | null>(null);
 
   const ordered = sortRequirementsDesc(config.requirements);
   const filtered = filterRequirements(ordered, filters);
+  const deleteReferences = deleteTarget
+    ? systemsReferencing(config, deleteTarget.id).length
+    : 0;
 
   return (
     <section className="requirements-page">
@@ -71,6 +77,7 @@ export function RequirementsPanel({
               update={update}
               t={t}
               onOpenSystem={onOpenSystem}
+              onRequestDelete={setDeleteTarget}
             />
           ))}
         </div>
@@ -82,6 +89,24 @@ export function RequirementsPanel({
           update={update}
           t={t}
           onClose={() => setCreateOpen(false)}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          title={t('requirements.deleteTitle')}
+          message={
+            deleteReferences > 0
+              ? t('requirements.deleteWarning', { n: deleteReferences })
+              : t('requirements.deleteWarningNone')
+          }
+          confirmLabel={t('requirements.deleteConfirm')}
+          cancelLabel={t('common.cancel')}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            update((cfg) => deleteRequirement(cfg, deleteTarget.id));
+            setDeleteTarget(null);
+          }}
         />
       )}
 

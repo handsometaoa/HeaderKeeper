@@ -1,4 +1,5 @@
 import type { HeaderPair, LaneConfig, Requirement } from './types';
+import { dedupeHeaders } from './headers';
 import { uid } from '@/utils/uid';
 
 type UnknownRecord = Record<string, unknown>;
@@ -55,7 +56,7 @@ function normalizeHeaders(raw: unknown): HeaderPair[] {
       ? Object.entries(raw).map(([key, value]) => ({ key, value }))
       : [];
 
-  return entries
+  const normalized = entries
     .filter(isRecord)
     .map((header) => ({
       id: uid(),
@@ -68,6 +69,7 @@ function normalizeHeaders(raw: unknown): HeaderPair[] {
             : '',
     }))
     .filter((header) => header.key !== '' || header.value !== '');
+  return dedupeHeaders(normalized);
 }
 
 /** 过期时间：支持标准字符串或毫秒时间戳 */

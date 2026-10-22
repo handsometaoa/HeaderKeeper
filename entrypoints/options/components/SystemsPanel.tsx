@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { deleteSystem, setSystemEnabled } from '@/lib/ops';
 import type { LaneConfig, SystemEntry } from '@/lib/types';
 import type { T } from '@/lib/i18n';
 import type { Update } from '@/hooks/useLaneConfig';
+import { ConfirmModal } from './ConfirmModal';
 import { SystemFormModal } from './SystemFormModal';
 
 function SystemRow({
@@ -10,35 +11,19 @@ function SystemRow({
   update,
   t,
   onOpen,
+  onEdit,
   onDelete,
 }: {
   system: SystemEntry;
   update: Update;
   t: T;
   onOpen: (systemId: string) => void;
-  onDelete: (systemId: string) => void;
+  onEdit: (system: SystemEntry) => void;
+  onDelete: (system: SystemEntry) => void;
 }) {
-  const [confirming, setConfirming] = useState(false);
-  useEffect(() => {
-    if (!confirming) return;
-    const timer = window.setTimeout(() => setConfirming(false), 3000);
-    return () => window.clearTimeout(timer);
-  }, [confirming]);
-
   const enabled = system.enabled !== false;
   return (
-    <div
-      className="sys-row"
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(system.id)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onOpen(system.id);
-        }
-      }}
-    >
+    <div className="sys-row">
       <span className={`sys-dot${enabled && system.activeRequirementId ? ' on' : ''}`} />
       <div className="sys-row-main">
         <span className="sys-row-name disp">{system.name || t('settings.unnamedSystem')}</span>
@@ -54,47 +39,40 @@ function SystemRow({
           )}
         </span>
       </div>
-      <span className="sys-row-count mono">
-        {t('systems.reqCount', { n: system.requirementIds.length })}
-      </span>
-      <label
-        className="switch mini sys-row-switch"
-        title={enabled ? t('card.switchOffTitle') : t('card.switchOnTitle')}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => update((cfg) => setSystemEnabled(cfg, system.id, e.target.checked))}
-        />
-        <span className="track" />
-      </label>
-      <button
-        type="button"
-        className={`sys-row-delete${confirming ? ' confirming' : ''}`}
-        title={confirming ? t('common.confirmAgain') : t('systems.deleteTitle')}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (confirming) onDelete(system.id);
-          else setConfirming(true);
-        }}
-      >
-        {confirming ? t('systems.deleteConfirm') : t('common.delete')}
-      </button>
-      <svg
-        className="sys-row-chevron"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="m9 18 6-6-6-6" />
-      </svg>
+
+      <div className="sys-row-actions">
+        <button
+          type="button"
+          className="sys-row-action primary sys-row-manage"
+          onClick={() => onOpen(system.id)}
+        >
+          {t('systems.manage')}({system.requirementIds.length})
+        </button>
+        <button
+          type="button"
+          className="sys-row-action sys-row-edit"
+          onClick={() => onEdit(system)}
+        >
+          {t('systems.editTitle')}
+        </button>
+        <button
+          type="button"
+          className="sys-row-action sys-row-toggle"
+          onClick={() =>
+            update((cfg) => setSystemEnabled(cfg, system.id, !enabled))
+          }
+        >
+          {enabled ? t('systems.disable') : t('systems.enable')}
+        </button>
+        <button
+          type="button"
+          className="sys-row-action danger sys-row-delete"
+          title={t('systems.deleteTitle', { name: system.name })}
+          onClick={() => onDelete(system)}
+        >
+          {t('systems.delete')}
+        </button>
+      </div>
     </div>
   );
 }
@@ -110,13 +88,30 @@ export function SystemsPanel({
   t: T;
   onOpenSystem: (systemId: string) => void;
 }) {
-  const [createOpen, setCreateOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingSystem, setEditingSystem] = useState<SystemEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SystemEntry | null>(null);
+
+  const openCreate = () => {
+    setEditingSystem(null);
+    setFormOpen(true);
+  };
+
+  const openEdit = (system: SystemEntry) => {
+    setEditingSystem(system);
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingSystem(null);
+  };
 
   return (
     <section className="systems-page">
       <div className="page-actions">
         <span className="page-count mono">{t('systems.count', { n: config.systems.length })}</span>
-        <button type="button" className="btn primary" onClick={() => setCreateOpen(true)}>
+        <button type="button" className="btn primary" onClick={openCreate}>
           {t('systems.new')}
         </button>
       </div>
@@ -132,19 +127,38 @@ export function SystemsPanel({
               update={update}
               t={t}
               onOpen={onOpenSystem}
-              onDelete={(id) => update((cfg) => deleteSystem(cfg, id))}
+              onEdit={openEdit}
+              onDelete={setDeleteTarget}
             />
           ))}
         </div>
       )}
 
-      {createOpen && (
+      {formOpen && (
         <SystemFormModal
           config={config}
           update={update}
+          system={editingSystem ?? undefined}
           t={t}
-          onClose={() => setCreateOpen(false)}
-          onCreated={onOpenSystem}
+          onClose={closeForm}
+          onSaved={onOpenSystem}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          title={t('systems.deleteTitle', {
+            name: deleteTarget.name || t('settings.unnamedSystem'),
+          })}
+          message={t('systems.deleteNote')}
+          confirmLabel={t('systems.deleteConfirm')}
+          cancelLabel={t('common.cancel')}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            const targetId = deleteTarget.id;
+            update((cfg) => deleteSystem(cfg, targetId));
+            setDeleteTarget(null);
+          }}
         />
       )}
     </section>

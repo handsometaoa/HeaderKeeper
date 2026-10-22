@@ -210,6 +210,7 @@ const IMPORT_STANDARD_JSON = JSON.stringify([
   },
   { id: 'req1', name: '冲突ID' },
   { name: '需求2' },
+  { name: '无ID需求', description: '自动生成 id' },
   { description: '缺少名称' },
 ]);
 
@@ -597,35 +598,95 @@ async function main() {
     if (sysRows !== 2 || navItems !== 4) throw new Error('设置页渲染不符合预期');
     await screenshot(options, 'smoke-options.png');
 
-    // 9. 系统详情：改名 + 多域名
-    await options.eval(`document.querySelectorAll('.sys-row')[0]?.click()`);
+    // 8.5 全局关闭提示：显示 3 秒后消失
+    await realClick(options, '.pill-toggle .switch input');
+    await sleep(300);
+    const toastShown = await options.eval(`!!document.querySelector('.toast')`);
+    await sleep(3200);
+    const toastGone = await options.eval(`!document.querySelector('.toast')`);
+    await realClick(options, '.pill-toggle .switch input');
     await sleep(500);
-    const detailShown = await options.eval(
-      `!!document.querySelector('.system-detail') && document.querySelector('.system-name-field input')?.value === '运营后台'`,
-    );
-    if (!detailShown) throw new Error('系统详情未打开');
-    await setInput(options, '.system-name-field input', '运营后台A');
-    await blur(options, '.system-name-field input');
-    await sleep(600);
+    console.log(`✓ 全局关闭提示: 显示=${toastShown}, 3 秒后消失=${toastGone}`);
+    if (!toastShown || !toastGone) throw new Error('全局关闭提示未按预期消失');
+
+    // 9. 系统列表：编辑弹窗改名 + 多域名；管理需求进入详情
+    await realClick(options, '.sys-row-edit', 0);
+    if (!(await waitFor(options, `!!document.querySelector('.system-form-modal')`))) {
+      throw new Error('编辑系统弹窗未打开');
+    }
+    await setInput(options, '.system-form-modal input[type="text"]', '运营后台A', 0);
+    await setInput(options, '.system-form-modal .domain-add input', '*.test.acme.cn', 0);
+    await sleep(200);
+    await realClick(options, '.system-form-modal .domain-add .btn');
+    await sleep(200);
+    await realClick(options, '.system-form-modal .domain-chip .domain-remove', 0);
+    await sleep(200);
+    await realClick(options, '.system-form-modal .btn.primary');
+    await sleep(900);
     let cfg = await getConfig(options);
     if (cfg.systems[0].name !== '运营后台A') throw new Error('系统改名未生效');
+    if (cfg.systems[0].domains.length !== 2) throw new Error('域名编辑未生效');
+    console.log(
+      `✓ 系统列表编辑: 名称=${cfg.systems[0].name}, 域名 ${cfg.systems[0].domains.join(' / ')}`,
+    );
 
-    await setInput(options, '.system-domains-field .domain-add input', '*.test.acme.cn');
-    await realClick(options, '.system-domains-field .domain-add .btn');
-    await sleep(600);
+    await realClick(options, '.sys-row-toggle', 0);
+    await sleep(500);
     cfg = await getConfig(options);
-    if (cfg.systems[0].domains.length !== 3) throw new Error('域名添加未生效');
-    await realClick(options, '.system-domains-field .domain-chip .domain-remove', 0);
-    await sleep(600);
+    const toggledOff = cfg.systems[0].enabled === false;
+    await realClick(options, '.sys-row-toggle', 0);
+    await sleep(500);
     cfg = await getConfig(options);
-    if (cfg.systems[0].domains.length !== 2) throw new Error('域名移除未生效');
-    console.log(`✓ 系统详情: 名称=${cfg.systems[0].name}, 域名 ${cfg.systems[0].domains.join(' / ')}`);
+    const toggledOn = cfg.systems[0].enabled !== false;
+    console.log(`✓ 系统停用/启用: 停用=${toggledOff}, 恢复=${toggledOn}`);
+    if (!toggledOff || !toggledOn) throw new Error('系统停用/启用未生效');
+
+    await realClick(options, '.sys-row-manage', 0);
+    await sleep(600);
+    const detailShown = await options.eval(
+      `!!document.querySelector('.system-detail') && document.querySelector('.system-summary-name')?.textContent === '运营后台A'`,
+    );
+    if (!detailShown) throw new Error('管理需求未进入系统详情');
     await screenshot(options, 'smoke-system-detail.png');
 
     // 10. 新建需求（弹窗，自动关联当前系统）
     await realClick(options, '.req-toolbar-actions .btn.primary');
     if (!(await waitFor(options, `!!document.querySelector('.req-form-modal')`))) {
       throw new Error('新建需求弹窗未打开');
+    }
+    const reqModalHeight = await options.eval(
+      `document.querySelector('.req-form-modal').offsetHeight`,
+    );
+    await realClick(options, '.req-form-modal .btn.primary');
+    await sleep(300);
+    const reqInvalid = await options.eval(`(() => {
+      const modal = document.querySelector('.req-form-modal');
+      return JSON.stringify({
+        invalid: !!modal.querySelector('input.invalid'),
+        errorText: document.querySelectorAll('.req-form-modal .form-error').length,
+        height: modal.offsetHeight,
+      });
+    })()`).then(JSON.parse);
+    if (
+      !reqInvalid.invalid ||
+      reqInvalid.errorText !== 0 ||
+      reqInvalid.height !== reqModalHeight
+    ) {
+      throw new Error('新建需求名称空值描红/弹窗尺寸不符合预期');
+    }
+    const reqCountBeforeCreate = (await getConfig(options)).requirements.length;
+    await setInput(options, '.req-form-modal input[type="text"]', '需求1', 0);
+    await realClick(options, '.req-form-modal .btn.primary');
+    await sleep(300);
+    const dupReqInvalid = await options.eval(
+      `!!document.querySelector('.req-form-modal input.invalid')`,
+    );
+    cfg = await getConfig(options);
+    console.log(
+      `✓ 新建需求重名: 描红=${dupReqInvalid}, 未创建=${cfg.requirements.length === reqCountBeforeCreate}`,
+    );
+    if (!dupReqInvalid || cfg.requirements.length !== reqCountBeforeCreate) {
+      throw new Error('新建需求重名未被阻止');
     }
     await setInput(options, '.req-form-modal input[type="text"]', '新建共享需求', 0);
     await setInput(options, '.req-form-modal input[type="text"]', '测试用', 1);
@@ -667,37 +728,47 @@ async function main() {
     await sleep(600);
     const reqCards = await options.eval(`document.querySelectorAll('.requirement-card').length`);
     const sharedShown = await options.eval(
-      `document.body.innerText.includes('共享 · 2 个系统') && document.body.innerText.includes('会员中心')`,
+      `document.body.innerText.includes('运营后台') && document.body.innerText.includes('会员中心')`,
     );
-    console.log(`✓ 需求管理: ${reqCards} 张卡片, 共享引用展示=${sharedShown}`);
+    console.log(`✓ 需求管理: ${reqCards} 张卡片, 引用系统展示=${sharedShown}`);
     if (reqCards !== 4 || !sharedShown) throw new Error('需求管理渲染不符合预期');
     await screenshot(options, 'smoke-requirements.png');
 
-    // 名称筛选
+    // 名称筛选：输入后不立即生效，点击搜索才筛选
     await setInput(options, '.filters .filter-input', '需求3', 0);
     await sleep(400);
     let filtered = await options.eval(`document.querySelectorAll('.requirement-card').length`);
+    if (filtered !== 4) throw new Error(`搜索前不应筛选: ${filtered}`);
+    await realClick(options, '.filter-search');
+    await sleep(400);
+    filtered = await options.eval(`document.querySelectorAll('.requirement-card').length`);
     if (filtered !== 1) throw new Error(`名称筛选结果不符合预期: ${filtered}`);
     await realClick(options, '.filter-clear');
     await sleep(400);
 
     // Header 值筛选
     await setInput(options, '.filters .filter-input', 'feature-cart-b', 1);
+    await sleep(300);
+    await realClick(options, '.filter-search');
     await sleep(400);
     filtered = await options.eval(`document.querySelectorAll('.requirement-card').length`);
     if (filtered !== 1) throw new Error(`Header 值筛选结果不符合预期: ${filtered}`);
     await realClick(options, '.filter-clear');
     await sleep(400);
 
-    // 过期状态筛选：把第一张卡片设为已过期，再用下拉筛选
+    // 过期状态筛选：把第一张卡片设为已过期，再用下拉 + 搜索
     await setInput(options, '.requirement-card .expire-input', '2020-01-01T00:00', 0);
     await sleep(700);
     await setSelect(options, '.filter-select select', 'expired');
+    await sleep(200);
+    await realClick(options, '.filter-search');
     await sleep(400);
     const expiredFiltered = await options.eval(
       `document.querySelectorAll('.requirement-card').length`,
     );
     await setSelect(options, '.filter-select select', 'valid');
+    await sleep(200);
+    await realClick(options, '.filter-search');
     await sleep(400);
     const validFiltered = await options.eval(
       `document.querySelectorAll('.requirement-card').length`,
@@ -706,7 +777,7 @@ async function main() {
     if (expiredFiltered !== 1 || validFiltered !== 3) {
       throw new Error('过期状态筛选不符合预期');
     }
-    await setSelect(options, '.filter-select select', 'all');
+    await realClick(options, '.filter-clear');
     await sleep(400);
 
     // 内联改名
@@ -718,14 +789,55 @@ async function main() {
     }
     console.log('✓ 需求内联编辑');
 
+    // 内联编辑：同一需求内 Header Key 不可重复
+    const dupCardReady = await options.eval(`(() => {
+      const card = [...document.querySelectorAll('.requirement-card')].find(
+        (c) => c.querySelector('.scheme-name')?.value === '需求1');
+      if (!card) return false;
+      card.querySelector('.pair-add')?.click();
+      return true;
+    })()`);
+    if (!dupCardReady) throw new Error('未找到需求1卡片');
+    await sleep(400);
+    await options.eval(`(() => {
+      const card = [...document.querySelectorAll('.requirement-card')].find(
+        (c) => c.querySelector('.scheme-name')?.value === '需求1');
+      const inputs = [...card.querySelectorAll('.key-input')];
+      const input = inputs[inputs.length - 1];
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+      setter.call(input, 'X-Lane');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return 'ok';
+    })()`);
+    await sleep(400);
+    const dupInvalid = await options.eval(`(() => {
+      const card = [...document.querySelectorAll('.requirement-card')].find(
+        (c) => c.querySelector('.scheme-name')?.value === '需求1');
+      const inputs = [...card.querySelectorAll('.key-input')];
+      return inputs[inputs.length - 1].classList.contains('invalid');
+    })()`);
+    cfg = await getConfig(options);
+    const req1 = cfg.requirements.find((r) => r.name === '需求1');
+    const lastHeader = req1.headers[req1.headers.length - 1];
+    console.log(`✓ 重复 Header Key: 描红=${dupInvalid}, 未写入=${lastHeader.key === ''}`);
+    if (!dupInvalid || lastHeader.key !== '') {
+      throw new Error('重复 Header Key 未被阻止');
+    }
+
     // 12.5 需求导入：标准 JSON
     await realClick(options, '.page-actions-actions .btn', 0);
     if (!(await waitFor(options, `!!document.querySelector('.import-modal')`))) {
       throw new Error('导入弹窗未打开');
     }
     await sleep(600);
+    const parseButtonLabel = await options.eval(
+      `document.querySelector('.import-actions .btn.primary')?.textContent ?? ''`,
+    );
+    if (!parseButtonLabel.includes('解析预览')) {
+      throw new Error(`解析/导入按钮未合并且标签异常: ${parseButtonLabel}`);
+    }
     await setInput(options, '.import-textarea', IMPORT_STANDARD_JSON, 0);
-    await realClick(options, '.import-toolbar .btn');
+    await realClick(options, '.import-actions .btn.primary');
     await waitImportParsed(options);
     const importSummary = await options.eval(
       `document.querySelector('.import-summary')?.innerText ?? ''`,
@@ -740,11 +852,20 @@ async function main() {
       `✓ 标准导入预览: ${importSummary.replace(/\n/g, ' / ')}, 冲突 ${importConflicts}, 无效 ${importInvalid}`,
     );
     if (
-      !importSummary.includes('可导入 1 条') ||
+      !importSummary.includes('可导入 2 条') ||
       importConflicts !== 2 ||
       importInvalid !== 1
     ) {
       throw new Error('标准导入预览不符合预期');
+    }
+    await realClick(options, '.import-item-main', 0);
+    await sleep(250);
+    const previewHeaders = await options.eval(
+      `document.querySelector('.import-item-headers')?.innerText ?? ''`,
+    );
+    console.log(`✓ 预览展开 Header: ${previewHeaders.replace(/\n/g, ' / ')}`);
+    if (!previewHeaders.includes('X-Imported') || !previewHeaders.includes('yes')) {
+      throw new Error('预览需求 Header 展开不符合预期');
     }
     await realClick(options, '.import-actions .btn.primary');
     await sleep(900);
@@ -752,12 +873,14 @@ async function main() {
       `document.querySelector('.import-result')?.textContent ?? ''`,
     );
     cfg = await getConfig(options);
+    const autoIdRequirement = cfg.requirements.find((r) => r.name === '无ID需求');
     console.log(
-      `✓ 标准导入: ${standardImportResult}, 需求 ${cfg.requirements.length} 个`,
+      `✓ 标准导入: ${standardImportResult}, 需求 ${cfg.requirements.length} 个, 缺省 id 自动生成=${!!autoIdRequirement?.id}`,
     );
     if (
-      !standardImportResult.includes('已导入 1 条') ||
-      cfg.requirements.length !== 5
+      !standardImportResult.includes('已导入 2 条') ||
+      cfg.requirements.length !== 6 ||
+      !autoIdRequirement?.id
     ) {
       throw new Error('标准导入结果不符合预期');
     }
@@ -774,7 +897,35 @@ async function main() {
     await sleep(200);
     await setInput(options, '.import-textarea', IMPORT_CUSTOM_JSON, 0);
     await setInput(options, '.import-code', IMPORT_CUSTOM_CODE, 0);
-    await realClick(options, '.import-toolbar .btn');
+    const importLayout = await options.eval(`(() => {
+      const areas = [...document.querySelectorAll('.import-split .import-textarea')];
+      const rects = areas.map((el) => el.getBoundingClientRect());
+      return JSON.stringify({
+        tops: rects.map((r) => Math.round(r.top)),
+        heights: rects.map((r) => Math.round(r.height)),
+        extraCodeActions: document.querySelectorAll('.import-code-actions .link-btn').length,
+        saveButtons: document.querySelectorAll('.import-code-save').length,
+      });
+    })()`).then(JSON.parse);
+    console.log(
+      `✓ 自定义解析布局: top=${importLayout.tops.join('/')}, height=${importLayout.heights.join('/')}, 多余按钮=${importLayout.extraCodeActions}`,
+    );
+    if (
+      importLayout.tops[0] !== importLayout.tops[1] ||
+      importLayout.heights[0] !== importLayout.heights[1] ||
+      importLayout.extraCodeActions !== 0 ||
+      importLayout.saveButtons !== 1
+    ) {
+      throw new Error('自定义解析布局/按钮不符合预期');
+    }
+    await realClick(options, '.import-code-save');
+    await sleep(400);
+    const savedParser = await options.eval(
+      `chrome.storage.local.get('parserCode').then(({parserCode}) => parserCode ?? '')`,
+    );
+    if (savedParser !== IMPORT_CUSTOM_CODE) throw new Error('解析代码保存未生效');
+    console.log('✓ 解析代码已保存');
+    await realClick(options, '.import-actions .btn.primary');
     await waitImportParsed(options);
     await realClick(options, '.import-actions .btn.primary');
     await sleep(900);
@@ -794,7 +945,7 @@ async function main() {
     ) {
       throw new Error('自定义导入结果不符合预期');
     }
-    if (cfg.requirements.length !== 6) throw new Error('自定义导入后需求数量不符合预期');
+    if (cfg.requirements.length !== 7) throw new Error('自定义导入后需求数量不符合预期');
     await realClick(options, '.import-actions .btn.primary');
     await sleep(400);
 
@@ -805,10 +956,14 @@ async function main() {
     }
     await sleep(700);
     await realClick(options, '.import-mode button', 1);
-    await sleep(200);
+    await sleep(300);
+    const persistedCode = await options.eval(
+      `document.querySelector('.import-code')?.value ?? ''`,
+    );
+    if (persistedCode !== IMPORT_CUSTOM_CODE) throw new Error('解析代码未从存储恢复');
     await setInput(options, '.import-textarea', IMPORT_CUSTOM_JSON, 0);
     await setInput(options, '.import-code', IMPORT_CUSTOM_CODE, 0);
-    await realClick(options, '.import-toolbar .btn');
+    await realClick(options, '.import-actions .btn.primary');
     await waitImportParsed(options);
     const duplicateConflict = await options.eval(
       `document.querySelector('.import-conflict')?.textContent ?? ''`,
@@ -816,10 +971,17 @@ async function main() {
     const duplicateDisabled = await options.eval(
       `document.querySelector('.import-actions .btn.primary')?.disabled ?? false`,
     );
-    console.log(
-      `✓ 重复导入唯一键冲突: ${duplicateConflict}, 导入按钮禁用=${duplicateDisabled}`,
+    const emptyImportLabel = await options.eval(
+      `document.querySelector('.import-actions .btn.primary')?.textContent ?? ''`,
     );
-    if (!duplicateConflict.includes('EXT-1') || !duplicateDisabled) {
+    console.log(
+      `✓ 重复导入唯一键冲突: ${duplicateConflict}, 按钮=${emptyImportLabel}, 禁用=${duplicateDisabled}`,
+    );
+    if (
+      !duplicateConflict.includes('EXT-1') ||
+      !duplicateDisabled ||
+      !emptyImportLabel.includes('没有可导入的需求')
+    ) {
       throw new Error('唯一键冲突未正确阻止导入');
     }
     await realClick(options, '.import-modal .modal-head .icon-btn');
@@ -833,11 +995,14 @@ async function main() {
     if (sharedIndex < 0) throw new Error('未找到共享需求卡片');
     await realClick(options, '.requirement-card .req-delete', sharedIndex);
     await sleep(400);
-    const warning = await options.eval(
-      `document.querySelector('.req-delete-warning')?.textContent ?? ''`,
+    const confirmShown = await options.eval(`!!document.querySelector('.confirm-modal')`);
+    const confirmMessage = await options.eval(
+      `document.querySelector('.confirm-message')?.textContent ?? ''`,
     );
-    if (!warning.includes('2 个系统')) throw new Error(`删除警告不符合预期: ${warning}`);
-    await realClick(options, '.requirement-card .req-delete', sharedIndex);
+    if (!confirmShown || !confirmMessage.includes('2 个系统')) {
+      throw new Error(`删除确认弹窗不符合预期: ${confirmMessage}`);
+    }
+    await realClick(options, '.confirm-modal .btn.danger');
     await sleep(900);
     cfg = await getConfig(options);
     const req2Gone =
@@ -852,26 +1017,54 @@ async function main() {
     await sleep(600);
     await realClick(options, '.sys-row-delete', 1);
     await sleep(400);
-    const sysConfirming = await options.eval(
-      `!!document.querySelector('.sys-row-delete.confirming')`,
+    const sysConfirmShown = await options.eval(
+      `!!document.querySelector('.confirm-modal') && document.querySelector('.confirm-message')?.textContent.includes('共享需求')`,
     );
+    await realClick(options, '.confirm-modal .btn:not(.danger)');
+    await sleep(400);
+    cfg = await getConfig(options);
+    const sysKeptOnCancel = cfg.systems.length === 2;
     await realClick(options, '.sys-row-delete', 1);
+    await sleep(300);
+    await realClick(options, '.confirm-modal .btn.danger');
     await sleep(900);
     cfg = await getConfig(options);
     console.log(
-      `✓ 删除系统: 确认态=${sysConfirming}, 系统剩 ${cfg.systems.length} 个, 需求保留 ${cfg.requirements.length} 个`,
+      `✓ 删除系统: 确认弹窗=${sysConfirmShown}, 取消保留=${sysKeptOnCancel}, 系统剩 ${cfg.systems.length} 个, 需求保留 ${cfg.requirements.length} 个`,
     );
-    if (sysConfirming !== true || cfg.systems.length !== 1) {
+    if (!sysConfirmShown || !sysKeptOnCancel || cfg.systems.length !== 1) {
       throw new Error('删除系统未生效');
     }
     if (cfg.requirements.length !== reqCountBeforeSystemDelete) {
       throw new Error('删除系统不应删除共享需求');
     }
 
-    // 13.5 新建系统弹窗 + 详情页红字删除
+    // 13.5 新建系统弹窗 + 列表红字删除
     await realClick(options, '.page-actions .btn.primary');
     if (!(await waitFor(options, `!!document.querySelector('.system-form-modal')`))) {
       throw new Error('新建系统弹窗未打开');
+    }
+    const sysModalHeight = await options.eval(
+      `document.querySelector('.system-form-modal').offsetHeight`,
+    );
+    await realClick(options, '.system-form-modal .btn.primary');
+    await sleep(300);
+    const sysInvalid = await options.eval(`(() => {
+      const modal = document.querySelector('.system-form-modal');
+      return JSON.stringify({
+        name: !!modal.querySelector('input.invalid'),
+        domain: !!modal.querySelector('.domain-add input.invalid'),
+        errorText: modal.querySelectorAll('.form-error').length,
+        height: modal.offsetHeight,
+      });
+    })()`).then(JSON.parse);
+    if (
+      !sysInvalid.name ||
+      !sysInvalid.domain ||
+      sysInvalid.errorText !== 0 ||
+      sysInvalid.height !== sysModalHeight
+    ) {
+      throw new Error('新建系统空值描红/弹窗尺寸不符合预期');
     }
     await setInput(options, '.system-form-modal input[type="text"]', '模态系统', 0);
     await setInput(options, '.system-form-modal .domain-add input', 'modal.acme.cn', 0);
@@ -883,7 +1076,7 @@ async function main() {
     cfg = await getConfig(options);
     const modalSystem = cfg.systems.find((s) => s.name === '模态系统');
     const modalDetailShown = await options.eval(
-      `!!document.querySelector('.system-detail') && document.querySelector('.system-name-field input')?.value === '模态系统'`,
+      `!!document.querySelector('.system-detail') && document.querySelector('.system-summary-name')?.textContent === '模态系统'`,
     );
     console.log(
       `✓ 新建系统弹窗: 系统 ${cfg.systems.length} 个, 域名=${modalSystem?.domains.join(',')}, 已进入详情=${modalDetailShown}`,
@@ -892,20 +1085,27 @@ async function main() {
       throw new Error('新建系统弹窗流程不符合预期');
     }
 
-    await realClick(options, '.system-info-foot .link-btn.danger');
-    await sleep(300);
-    const detailDeleteConfirming = await options.eval(
-      `document.querySelector('.system-info-foot .link-btn.danger')?.textContent.includes('确认删除')`,
+    await realClick(options, '.system-summary-back');
+    await sleep(500);
+    const newRowIndex = await options.eval(
+      `[...document.querySelectorAll('.sys-row')].findIndex(
+         (row) => row.querySelector('.sys-row-name')?.textContent === '模态系统')`,
     );
-    await realClick(options, '.system-info-foot .link-btn.danger');
+    if (newRowIndex < 0) throw new Error('未找到新建系统行');
+    await realClick(options, '.sys-row-delete', newRowIndex);
+    await sleep(300);
+    const listDeleteConfirming = await options.eval(
+      `!!document.querySelector('.confirm-modal')`,
+    );
+    await realClick(options, '.confirm-modal .btn.danger');
     await sleep(900);
     cfg = await getConfig(options);
-    const backToList = await options.eval(`document.querySelectorAll('.sys-row').length`);
+    const rowsAfterDelete = await options.eval(`document.querySelectorAll('.sys-row').length`);
     console.log(
-      `✓ 详情页红字删除: 确认态=${detailDeleteConfirming}, 系统剩 ${cfg.systems.length} 个, 列表行 ${backToList}`,
+      `✓ 列表删除系统弹窗: 确认弹窗=${listDeleteConfirming}, 系统剩 ${cfg.systems.length} 个, 列表行 ${rowsAfterDelete}`,
     );
-    if (!detailDeleteConfirming || cfg.systems.length !== 1 || backToList !== 1) {
-      throw new Error('详情页删除系统流程不符合预期');
+    if (!listDeleteConfirming || cfg.systems.length !== 1 || rowsAfterDelete !== 1) {
+      throw new Error('列表删除系统流程不符合预期');
     }
 
     // 14. 常规设置 / 关于 / 深链
@@ -933,7 +1133,7 @@ async function main() {
     const deep = await openPage('options.html?system=sys1');
     await sleep(900);
     const deepShown = await deep.eval(
-      `!!document.querySelector('.system-detail') && document.querySelector('.system-name-field input')?.value === '运营后台A'`,
+      `!!document.querySelector('.system-detail') && document.querySelector('.system-summary-name')?.textContent === '运营后台A'`,
     );
     console.log(`✓ 深链定位系统详情: ${deepShown}`);
     if (!deepShown) throw new Error('深链未定位到系统详情');

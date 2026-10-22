@@ -14,6 +14,7 @@ const zh = {
   'common.create': '创建',
   'common.clear': '清除',
   'common.delete': '删除',
+  'common.edit': '编辑',
   'common.confirmDeleteQuestion': '确认删除？',
   'common.confirmAgain': '再次点击确认删除',
 
@@ -92,8 +93,6 @@ const zh = {
   'general.dataDesc': '导出或导入完整配置（系统 + 共享需求）。',
   'general.storage': '数据存储',
   'general.storageDesc': '所有系统、需求与配置仅保存在本地浏览器中，不会上传到任何服务器。',
-  'general.version': '当前版本',
-  'general.globalHint': '全局注入开关位于页面右上角。',
 
   // 域名编辑器
   'domains.empty': '还没有匹配域名',
@@ -107,19 +106,23 @@ const zh = {
   'systems.count': '共 {n} 个',
   'systems.new': '＋ 新建系统',
   'systems.newTitle': '新建系统',
+  'systems.editTitle': '编辑系统',
+  'systems.manage': '管理需求',
+  'systems.disable': '停用系统',
+  'systems.enable': '启用系统',
   'systems.name': '系统名称',
   'systems.namePh': '如 运营后台',
   'systems.domains': '匹配域名',
   'systems.create': '创建系统',
   'systems.empty': '还没有系统，先创建一个。',
-  'systems.reqCount': '{n} 个需求',
   'systems.delete': '删除系统',
   'systems.deleteConfirm': '确认删除',
-  'systems.deleteTitle': '删除该系统（共享需求会保留）',
+  'systems.deleteTitle': '删除系统「{name}」',
   'systems.nameRequired': '系统名称必填',
   'systems.nameDuplicate': '系统名称已存在',
   'systems.domainRequired': '请至少填写一个有效域名',
   'systems.back': '← 返回系统列表',
+  'systems.backPlain': '返回系统列表',
   'systems.info': '基础信息',
   'systems.enabled': '参与注入',
   'systems.newRequirement': '＋ 新建需求',
@@ -161,16 +164,19 @@ const zh = {
   'requirements.create': '创建需求',
   'requirements.nameRequired': '需求名称必填',
   'requirements.orphan': '未引用',
+  'requirements.etc': '等',
+  'requirements.refSeparator': '、',
 
   // 筛选
   'filters.name': '需求名称',
-  'filters.namePh': '按需求名称筛选',
+  'filters.namePh': '需求名称（模糊）',
   'filters.headerValue': 'Header 值',
-  'filters.headerValuePh': '按 Header 值筛选',
-  'filters.status': '过期状态',
+  'filters.headerValuePh': 'Header 值',
+  'filters.status': '是否过期',
   'filters.all': '全部',
   'filters.valid': '未过期',
   'filters.expired': '已过期',
+  'filters.search': '搜索',
   'filters.clear': '清除筛选',
 
   // 需求卡片
@@ -190,6 +196,7 @@ const zh = {
   'requirement.valuePh': 'Header-Value',
   'requirement.addHeader': '＋ 添加 Header',
   'requirement.delHeaderTitle': '删除该 Header',
+  'requirement.keyDuplicate': '同一需求内 Header Key 不能重复',
 
   // 需求导入
   'requirements.import': '导入需求',
@@ -198,9 +205,12 @@ const zh = {
   'import.mode.custom': '自定义解析',
   'import.jsonLabel': '需求 JSON',
   'import.chooseFile': '选择文件',
-  'import.standardHelp': '支持需求数组、单个需求对象或 { requirements: [...] }。唯一键优先使用 id，缺省使用需求名称。',
+  'import.standardHelp': '支持需求数组、单个需求对象或 { requirements: [...] }。headers 支持对象或数组；id 可省略，导入时自动生成；唯一键优先使用 id，缺省使用需求名称。',
   'import.customJsonHelp': 'JSON 可以是任意结构，由下方解析代码转换。',
   'import.codeLabel': '解析代码（JS）',
+  'import.codeSave': '保存',
+  'import.codeSaved': '已保存',
+  'import.codeSaveFailed': '保存失败',
   'import.codeHelp': '代码在隔离沙箱中执行，不接触插件 API。data 是解析后的 JSON；返回需求数组、单个对象或 { requirements: [...] }，支持 async/Promise。',
   'import.parse': '解析预览',
   'import.parsing': '解析中…',
@@ -226,7 +236,13 @@ const zh = {
   'import.errorCode': '解析代码执行失败：{msg}',
   'import.errorResult': '解析结果不是有效的需求格式',
   'import.errorTimeout': '解析超时（超过 5 秒）',
-  'import.errorSandbox': '解析沙箱未就绪，请重试',
+  'import.errorSandboxManifest':
+    '当前扩展的 manifest 未声明 sandbox 页，请重新加载最新扩展包（开发模式请重启 npm run dev）。',
+  'import.errorSandboxFile': '未找到 sandbox.html，请重新构建或加载最新扩展包。',
+  'import.errorSandboxBlocked':
+    '沙箱页已加载但解析脚本未启动（可能被旧 manifest/CSP 拦截），请重启开发服务器并重新加载扩展。',
+  'import.errorSandboxMissing':
+    '沙箱页未能加载，请确认扩展包含 sandbox.html 并在 chrome://extensions 重新加载。',
   'import.errorFile': '文件读取失败',
 
   // 关于
@@ -248,6 +264,7 @@ const en: { [K in keyof typeof zh]: string } = {
   'common.create': 'Create',
   'common.clear': 'Clear',
   'common.delete': 'Delete',
+  'common.edit': 'Edit',
   'common.confirmDeleteQuestion': 'Delete this?',
   'common.confirmAgain': 'Click again to confirm',
 
@@ -324,8 +341,6 @@ const en: { [K in keyof typeof zh]: string } = {
   'general.storage': 'Data storage',
   'general.storageDesc':
     'All systems, requirements and settings stay in this browser — nothing is uploaded.',
-  'general.version': 'Version',
-  'general.globalHint': 'The global injection switch is at the top right.',
 
   'domains.empty': 'No domains yet',
   'domains.add': 'Add',
@@ -338,19 +353,23 @@ const en: { [K in keyof typeof zh]: string } = {
   'systems.count': '{n} total',
   'systems.new': '＋ New system',
   'systems.newTitle': 'New system',
+  'systems.editTitle': 'Edit system',
+  'systems.manage': 'Manage requirements',
+  'systems.disable': 'Disable system',
+  'systems.enable': 'Enable system',
   'systems.name': 'System name',
   'systems.namePh': 'e.g. Admin',
   'systems.domains': 'Match domains',
   'systems.create': 'Create system',
   'systems.empty': 'No systems yet — create one first.',
-  'systems.reqCount': '{n} requirements',
   'systems.delete': 'Delete system',
   'systems.deleteConfirm': 'Confirm delete',
-  'systems.deleteTitle': 'Delete this system (shared requirements are kept)',
+  'systems.deleteTitle': 'Delete system "{name}"',
   'systems.nameRequired': 'System name is required',
   'systems.nameDuplicate': 'System name already exists',
   'systems.domainRequired': 'Enter at least one valid domain',
   'systems.back': '← Back to systems',
+  'systems.backPlain': 'Back to systems',
   'systems.info': 'Basics',
   'systems.enabled': 'Inject',
   'systems.newRequirement': '＋ New requirement',
@@ -390,15 +409,18 @@ const en: { [K in keyof typeof zh]: string } = {
   'requirements.create': 'Create requirement',
   'requirements.nameRequired': 'Requirement name is required',
   'requirements.orphan': 'Unlinked',
+  'requirements.etc': '…',
+  'requirements.refSeparator': ', ',
 
   'filters.name': 'Requirement name',
-  'filters.namePh': 'Filter by requirement name',
+  'filters.namePh': 'Requirement name (fuzzy)',
   'filters.headerValue': 'Header value',
-  'filters.headerValuePh': 'Filter by header value',
+  'filters.headerValuePh': 'Header value',
   'filters.status': 'Expiry',
   'filters.all': 'All',
   'filters.valid': 'Not expired',
   'filters.expired': 'Expired',
+  'filters.search': 'Search',
   'filters.clear': 'Clear filters',
 
   'requirement.unnamed': 'Untitled requirement',
@@ -418,6 +440,7 @@ const en: { [K in keyof typeof zh]: string } = {
   'requirement.valuePh': 'Header-Value',
   'requirement.addHeader': '＋ Add header',
   'requirement.delHeaderTitle': 'Remove this header',
+  'requirement.keyDuplicate': 'Header keys must be unique within a requirement',
 
   'requirements.import': 'Import requirements',
   'import.title': 'Import requirements',
@@ -426,10 +449,13 @@ const en: { [K in keyof typeof zh]: string } = {
   'import.jsonLabel': 'Requirements JSON',
   'import.chooseFile': 'Choose file',
   'import.standardHelp':
-    'Accepts a requirements array, a single requirement object, or { requirements: [...] }. Unique key: id when present, otherwise the requirement name.',
+    'Accepts a requirements array, a single requirement object, or { requirements: [...] }. headers can be an object or an array; id is optional and generated automatically on import; the unique key uses id when present, otherwise the requirement name.',
   'import.customJsonHelp':
     'The JSON can have any shape — the parser below converts it.',
   'import.codeLabel': 'Parser code (JS)',
+  'import.codeSave': 'Save',
+  'import.codeSaved': 'Saved',
+  'import.codeSaveFailed': 'Save failed',
   'import.codeHelp':
     'Runs in an isolated sandbox without extension APIs. data is the parsed JSON; return a requirements array, a single object, or { requirements: [...] }. async/Promise is supported.',
   'import.parse': 'Parse and preview',
@@ -456,7 +482,14 @@ const en: { [K in keyof typeof zh]: string } = {
   'import.errorCode': 'Parser failed: {msg}',
   'import.errorResult': 'The result is not a valid requirement format',
   'import.errorTimeout': 'Parsing timed out (over 5 seconds)',
-  'import.errorSandbox': 'Sandbox is not ready — try again',
+  'import.errorSandboxManifest':
+    'The loaded manifest does not declare a sandbox page — reload the latest extension build (restart npm run dev in dev mode).',
+  'import.errorSandboxFile':
+    'sandbox.html is missing — rebuild or reload the latest extension package.',
+  'import.errorSandboxBlocked':
+    'The sandbox page loaded but its script did not start (old manifest/CSP?) — restart the dev server and reload the extension.',
+  'import.errorSandboxMissing':
+    'The sandbox page did not load — make sure sandbox.html is in the extension and reload it at chrome://extensions.',
   'import.errorFile': 'Failed to read the file',
 
   'about.sub': 'Request-header switcher for lane / gray testing',

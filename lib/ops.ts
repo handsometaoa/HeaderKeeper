@@ -1,4 +1,5 @@
 import type { HeaderPair, LaneConfig, Requirement, SystemEntry } from './types';
+import { dedupeHeaders } from './headers';
 import { normalizeDomainToken } from './domains';
 import { normalizeLanguage } from './i18n';
 import { uid } from '@/utils/uid';
@@ -198,13 +199,15 @@ function isRecord(value: unknown): value is UnknownRecord {
 
 function cleanHeaders(raw: unknown): HeaderPair[] {
   if (!Array.isArray(raw)) return [];
-  return raw
-    .filter(isRecord)
-    .map((h) => ({
-      id: typeof h.id === 'string' && h.id ? h.id : uid(),
-      key: typeof h.key === 'string' ? h.key : '',
-      value: typeof h.value === 'string' ? h.value : '',
-    }));
+  return dedupeHeaders(
+    raw
+      .filter(isRecord)
+      .map((h) => ({
+        id: typeof h.id === 'string' && h.id ? h.id : uid(),
+        key: typeof h.key === 'string' ? h.key : '',
+        value: typeof h.value === 'string' ? h.value : '',
+      })),
+  );
 }
 
 /** 是否是当前版本（v2 共享需求库）的配置结构 */

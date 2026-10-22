@@ -1,9 +1,7 @@
-import { useEffect, useState } from 'react';
 import { requirementExpired } from '@/lib/requirements';
 import {
   addPair,
   deletePair,
-  deleteRequirement,
   unlinkRequirement,
   updatePair,
   updateRequirement,
@@ -11,12 +9,12 @@ import {
 import type { Requirement, SystemEntry } from '@/lib/types';
 import type { T } from '@/lib/i18n';
 import type { Update } from '@/hooks/useLaneConfig';
+import { HeaderPairRow } from './HeaderPairRow';
 
 /**
- * 共享需求卡片：
- * - 传 system 时用于系统详情（提供「移出本系统」）
- * - 不传 system 时用于需求管理（提供全局删除）
- * 引用系统与过期时间放在名称右侧，卡片主体只保留 Header 键值。
+ * 需求卡片（瀑布流双列）：
+ * 上半部分左中右三块：需求名称/描述、被引用系统、过期时间与操作。
+ * 下半部分为 Header 键值表。
  */
 export function RequirementCard({
   requirement,
@@ -26,6 +24,7 @@ export function RequirementCard({
   update,
   t,
   onOpenSystem,
+  onRequestDelete,
 }: {
   requirement: Requirement;
   references: SystemEntry[];
@@ -34,26 +33,23 @@ export function RequirementCard({
   update: Update;
   t: T;
   onOpenSystem?: (systemId: string) => void;
+  /** 需求管理页：打开删除确认弹窗 */
+  onRequestDelete?: (requirement: Requirement) => void;
 }) {
   const expired = requirementExpired(requirement);
-  // 两段式删除：第一次点击显示警告与确认文案，再点执行；4 秒后自动还原
-  const [confirming, setConfirming] = useState(false);
-  useEffect(() => {
-    if (!confirming) return;
-    const timer = window.setTimeout(() => setConfirming(false), 4000);
-    return () => window.clearTimeout(timer);
-  }, [confirming]);
 
   const patch = (value: Partial<Requirement>) =>
     update((cfg) => updateRequirement(cfg, requirement.id, (r) => ({ ...r, ...value })));
+
+  const visibleRefs = references.slice(0, 4);
 
   return (
     <div
       className={`scheme-card requirement-card${active ? ' active' : ''}`}
       data-requirement-id={requirement.id}
     >
-      <div className="scheme-head requirement-head">
-        <div className="scheme-title">
+      <div className="req-card-top">
+        <div className="req-card-left">
           <input
             type="text"
             className="scheme-name disp"
@@ -70,32 +66,47 @@ export function RequirementCard({
           />
         </div>
 
-        <div className="req-inline">
-          <div className="req-inline-group req-inline-refs">
-            <span className="req-inline-label">{t('requirements.referencedBy')}</span>
+        <div className="req-card-center">
+          <div className="req-meta-label">{t('requirements.referencedBy')}</div>
+          <div className="req-refs-text">
             {references.length === 0 ? (
-              <span className="req-refs-none">{t('requirements.unreferenced')}</span>
+              <span className="req-refs-none">{t('requirements.orphan')}</span>
             ) : (
-              references.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className="req-ref-chip"
-                  onClick={() => onOpenSystem?.(s.id)}
-                >
-                  {s.name || t('settings.unnamedSystem')}
-                </button>
-              ))
+              <>
+                {visibleRefs.map((s, index) => (
+                  <span key={s.id}>
+                    {index > 0 && (
+                      <span className="req-ref-sep">{t('requirements.refSeparator')}</span>
+                    )}
+                    <button
+                      type="button"
+                      className="req-ref-link"
+                      onClick={() => onOpenSystem?.(s.id)}
+                    >
+                      {s.name || t('settings.unnamedSystem')}
+                    </button>
+                  </span>
+                ))}
+                {references.length > 4 && (
+                  <span className="req-ref-more">{t('requirements.etc')}</span>
+                )}
+              </>
             )}
-            {references.length > 1 && (
-              <span className="shared-badge mono">
-                {t('systems.shared', { n: references.length })}
-              </span>
+          </div>
+        </div>
+
+        <div className="req-card-right">
+          <div className="req-badges">
+            {active && (
+              <span className="active-badge mono">{t('requirement.activeBadge')}</span>
+            )}
+            {expired && (
+              <span className="expired-badge mono">{t('requirement.expiredBadge')}</span>
             )}
           </div>
 
-          <div className="req-inline-group req-inline-expiry">
-            <span className="req-inline-label">{t('requirement.expiresLabel')}</span>
+          <div className="req-expiry">
+            <span className="req-meta-label">{t('requirement.expiresLabel')}</span>
             <input
               type="datetime-local"
               className="expire-input mono"
@@ -103,6 +114,9 @@ export function RequirementCard({
               title={t('requirement.expiresTitle')}
               onChange={(e) => patch({ expiresAt: e.target.value || null })}
             />
+          </div>
+
+          <div className="req-right-actions">
             {requirement.expiresAt && (
               <button
                 type="button"
@@ -112,46 +126,28 @@ export function RequirementCard({
                 {t('common.clear')}
               </button>
             )}
-            {expired && (
-              <span className="expired-badge mono">{t('requirement.expiredBadge')}</span>
+            {system ? (
+              <button
+                type="button"
+                className="link-btn req-remove"
+                title={t('systems.removeTitle')}
+                onClick={() => update((cfg) => unlinkRequirement(cfg, system.id, requirement.id))}
+              >
+                {t('systems.remove')}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="link-btn danger req-delete"
+                title={t('requirements.deleteTitle')}
+                onClick={() => onRequestDelete?.(requirement)}
+              >
+                {t('common.delete')}
+              </button>
             )}
           </div>
         </div>
-
-        <div className="req-head-actions">
-          {active && <span className="active-badge mono">{t('requirement.activeBadge')}</span>}
-          {system ? (
-            <button
-              type="button"
-              className="link-btn req-remove"
-              title={t('systems.removeTitle')}
-              onClick={() => update((cfg) => unlinkRequirement(cfg, system.id, requirement.id))}
-            >
-              {t('systems.remove')}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={`link-btn danger req-delete${confirming ? ' confirming' : ''}`}
-              title={confirming ? t('common.confirmAgain') : t('requirements.deleteTitle')}
-              onClick={() => {
-                if (confirming) update((cfg) => deleteRequirement(cfg, requirement.id));
-                else setConfirming(true);
-              }}
-            >
-              {confirming ? t('requirements.deleteConfirm') : t('common.delete')}
-            </button>
-          )}
-        </div>
       </div>
-
-      {confirming && (
-        <div className="req-delete-warning">
-          {references.length > 0
-            ? t('requirements.deleteWarning', { n: references.length })
-            : t('requirements.deleteWarningNone')}
-        </div>
-      )}
 
       <div className="pair-table">
         <div className="pair-head mono">
@@ -159,39 +155,27 @@ export function RequirementCard({
           <span>{t('requirement.valueLabel')}</span>
           <span />
         </div>
-        {requirement.headers.map((pair) => (
-          <div className="pair-row" key={pair.id}>
-            <input
-              type="text"
-              className="key-input"
-              value={pair.key}
-              placeholder={t('requirement.keyPh')}
-              onChange={(e) =>
-                update((cfg) =>
-                  updatePair(cfg, requirement.id, pair.id, { key: e.target.value }),
-                )
+        {requirement.headers.map((pair) => {
+          const otherKeys = requirement.headers
+            .filter((h) => h.id !== pair.id)
+            .map((h) => h.key.trim().toLowerCase())
+            .filter(Boolean);
+          return (
+            <HeaderPairRow
+              key={pair.id}
+              pair={pair}
+              otherKeys={otherKeys}
+              onKeyChange={(key) =>
+                update((cfg) => updatePair(cfg, requirement.id, pair.id, { key }))
               }
-            />
-            <input
-              type="text"
-              value={pair.value}
-              placeholder={t('requirement.valuePh')}
-              onChange={(e) =>
-                update((cfg) =>
-                  updatePair(cfg, requirement.id, pair.id, { value: e.target.value }),
-                )
+              onValueChange={(value) =>
+                update((cfg) => updatePair(cfg, requirement.id, pair.id, { value }))
               }
+              onDelete={() => update((cfg) => deletePair(cfg, requirement.id, pair.id))}
+              t={t}
             />
-            <button
-              type="button"
-              className="icon-btn"
-              title={t('requirement.delHeaderTitle')}
-              onClick={() => update((cfg) => deletePair(cfg, requirement.id, pair.id))}
-            >
-              ✕
-            </button>
-          </div>
-        ))}
+          );
+        })}
         <button
           type="button"
           className="pair-add"

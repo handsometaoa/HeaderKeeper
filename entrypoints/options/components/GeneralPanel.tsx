@@ -1,5 +1,4 @@
 import { useRef } from 'react';
-import { browser } from '#imports';
 import { LangToggle } from '@/components/LangToggle';
 import { parseImportedConfig } from '@/lib/ops';
 import type { LaneConfig } from '@/lib/types';
@@ -19,7 +18,6 @@ export function GeneralPanel({
   setLang: (lang: Language) => void;
   t: T;
 }) {
-  const version = browser.runtime.getManifest().version;
   const fileRef = useRef<HTMLInputElement>(null);
 
   const exportConfig = () => {
@@ -63,11 +61,11 @@ export function GeneralPanel({
           <div className="panel-desc">{t('general.dataDesc')}</div>
         </div>
         <div className="general-actions">
-          <button type="button" className="btn" onClick={exportConfig}>
-            {t('settings.export')}
-          </button>
           <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
             {t('settings.import')}
+          </button>
+          <button type="button" className="btn" onClick={exportConfig}>
+            {t('settings.export')}
           </button>
         </div>
       </div>
@@ -75,9 +73,6 @@ export function GeneralPanel({
       <div className="panel-card general-block">
         <div className="panel-label">{t('general.storage')}</div>
         <div className="panel-desc">{t('general.storageDesc')}</div>
-        <div className="general-meta mono">
-          v{version} · {t('general.globalHint')}
-        </div>
       </div>
 
       <input

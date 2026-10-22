@@ -93,6 +93,14 @@ input[type='text']::placeholder {
   color: var(--ink-3);
 }
 
+/* 校验失败：只描红，不增加提示文字 */
+input.invalid,
+input.invalid:focus {
+  border-color: var(--red);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgb(156 79 59 / 0.12);
+}
+
 /* Header Key 输入：绿色等宽 */
 input[type='text'].key-input {
   font-family: var(--mono);
@@ -210,6 +218,18 @@ input[type='text'].key-input {
 .btn.primary:hover {
   background: var(--accent-deep);
   box-shadow: 0 8px 20px -10px rgb(70 84 63 / 0.8);
+}
+
+.btn.danger {
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 6px 16px -10px rgb(156 79 59 / 0.7);
+}
+
+.btn.danger:hover {
+  background: #8a3f2c;
+  color: #fff;
+  box-shadow: 0 8px 20px -10px rgb(156 79 59 / 0.8);
 }
 
 .btn.dashed {

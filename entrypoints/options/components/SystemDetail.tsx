@@ -1,10 +1,5 @@
-import { useEffect, useState } from 'react';
-import {
-  deleteSystem,
-  linkRequirement,
-  setSystemEnabled,
-  updateSystem,
-} from '@/lib/ops';
+import { useState } from 'react';
+import { linkRequirement } from '@/lib/ops';
 import {
   emptyRequirementFilter,
   filterRequirements,
@@ -15,12 +10,12 @@ import {
 import type { LaneConfig, SystemEntry } from '@/lib/types';
 import type { T } from '@/lib/i18n';
 import type { Update } from '@/hooks/useLaneConfig';
-import { DomainEditor } from './DomainEditor';
 import { RequirementCard } from './RequirementCard';
 import { RequirementFilters } from './RequirementFilters';
 import { RequirementFormModal } from './RequirementFormModal';
 import { RequirementPicker } from './RequirementPicker';
 
+/** 系统详情：只读系统摘要 + 该系统关联需求的筛选、编辑与关联 */
 export function SystemDetail({
   config,
   system,
@@ -36,23 +31,9 @@ export function SystemDetail({
   onBack: () => void;
   onOpenSystem: (systemId: string) => void;
 }) {
-  const [nameDraft, setNameDraft] = useState(system.name);
-  const [nameError, setNameError] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [filters, setFilters] = useState(emptyRequirementFilter);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-
-  useEffect(() => {
-    setNameDraft(system.name);
-    setNameError('');
-  }, [system.id, system.name]);
-
-  useEffect(() => {
-    if (!confirmingDelete) return;
-    const timer = window.setTimeout(() => setConfirmingDelete(false), 4000);
-    return () => window.clearTimeout(timer);
-  }, [confirmingDelete]);
 
   const linked = systemRequirements(config, system);
   const filtered = filterRequirements(sortRequirementsDesc(linked), filters);
@@ -60,102 +41,22 @@ export function SystemDetail({
     (requirement) => !system.requirementIds.includes(requirement.id),
   );
 
-  /** 输入时即时校验并保存；重名/空名只提示，不写入配置 */
-  const handleNameChange = (value: string) => {
-    setNameDraft(value);
-    const name = value.trim();
-    if (!name) {
-      setNameError(t('systems.nameRequired'));
-      return;
-    }
-    if (config.systems.some((s) => s.id !== system.id && s.name === name)) {
-      setNameError(t('systems.nameDuplicate'));
-      return;
-    }
-    setNameError('');
-    if (name !== system.name) {
-      update((cfg) => updateSystem(cfg, system.id, (s) => ({ ...s, name })));
-    }
-  };
-
-  const setDomains = (domains: string[]) =>
-    update((cfg) => updateSystem(cfg, system.id, (s) => ({ ...s, domains })));
-
   return (
     <section className="system-detail">
-      <button type="button" className="link-btn back-link" onClick={onBack}>
-        {t('systems.back')}
-      </button>
-
-      <div className="panel-card system-info">
-        <div className="system-info-head">
-          <label className="edit-label system-name-field">
-            {t('systems.nameLabel')}
-            <input
-              type="text"
-              value={nameDraft}
-              placeholder={t('systems.namePh')}
-              onChange={(e) => handleNameChange(e.target.value)}
-              onBlur={() => {
-                const name = nameDraft.trim();
-                if (!name) {
-                  setNameError(t('systems.nameRequired'));
-                } else if (
-                  config.systems.some((s) => s.id !== system.id && s.name === name)
-                ) {
-                  setNameError(t('systems.nameDuplicate'));
-                }
-              }}
-            />
-          </label>
-          <div className="system-info-actions">
-            <span className="system-info-status mono">
-              {t('systems.reqCount', { n: system.requirementIds.length })}
-            </span>
-            <label
-              className="switch system-enable"
-              title={
-                system.enabled !== false ? t('card.switchOffTitle') : t('card.switchOnTitle')
-              }
-            >
-              <input
-                type="checkbox"
-                checked={system.enabled !== false}
-                onChange={(e) =>
-                  update((cfg) => setSystemEnabled(cfg, system.id, e.target.checked))
-                }
-              />
-              <span className="track" />
-            </label>
-          </div>
-        </div>
-
-        <div className="system-info-body">
-          {nameError && <div className="form-error">{nameError}</div>}
-
-          <div className="system-domains-field">
-            <div className="edit-label">{t('systems.domainsLabel')}</div>
-            <DomainEditor domains={system.domains} onChange={setDomains} t={t} />
-          </div>
-
-          <div className="system-info-foot">
-            <span className="system-info-note">{t('systems.deleteNote')}</span>
-            <button
-              type="button"
-              className={`link-btn danger${confirmingDelete ? ' confirming' : ''}`}
-              title={t('systems.deleteTitle')}
-              onClick={() => {
-                if (confirmingDelete) {
-                  update((cfg) => deleteSystem(cfg, system.id));
-                  onBack();
-                } else {
-                  setConfirmingDelete(true);
-                }
-              }}
-            >
-              {confirmingDelete ? t('systems.deleteConfirm') : t('systems.delete')}
-            </button>
-          </div>
+      <div className="system-summary-bar">
+        <button type="button" className="btn system-summary-back" onClick={onBack}>
+          {t('systems.backPlain')}
+        </button>
+        <span className="system-summary-divider" aria-hidden="true" />
+        <div className="system-summary-main">
+          <span
+            className={`sys-dot${
+              system.enabled !== false && system.activeRequirementId ? ' on' : ''
+            }`}
+          />
+          <span className="system-summary-name disp">
+            {system.name || t('settings.unnamedSystem')}
+          </span>
         </div>
       </div>
 

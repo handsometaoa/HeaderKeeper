@@ -61,11 +61,12 @@ export function buildDnrRules(config: LaneConfig): DnrRule[] {
     // 无使用中需求或需求已过期：不注入
     if (!requirement) continue;
 
-    const headers = new Map<string, string>();
+    // Header Key 大小写不敏感：同一需求内重复 Key 由后者覆盖
+    const headers = new Map<string, { key: string; value: string }>();
     for (const pair of requirement.headers) {
       const key = pair.key.trim();
       if (!key || !pair.value.trim()) continue;
-      headers.set(key, pair.value);
+      headers.set(key.toLowerCase(), { key, value: pair.value });
     }
     if (headers.size === 0) continue;
 
@@ -78,8 +79,8 @@ export function buildDnrRules(config: LaneConfig): DnrRule[] {
       },
       action: {
         type: 'modifyHeaders',
-        requestHeaders: [...headers].map(([header, value]) => ({
-          header,
+        requestHeaders: [...headers.values()].map(({ key, value }) => ({
+          header: key,
           operation: 'set',
           value,
         })),

@@ -1,29 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
+import { browser } from '#imports';
 import {
   applyRequirementImport,
   prepareRequirementImport,
 } from '@/lib/requirementImport';
+import {
+  DEFAULT_PARSER_CODE,
+  loadParserCode,
+  saveParserCode,
+} from '@/services/parserStore';
 import type { ImportPreview } from '@/lib/requirementImport';
 import type { LaneConfig } from '@/lib/types';
 import type { T } from '@/lib/i18n';
 import type { Update } from '@/hooks/useLaneConfig';
 
 const JSON_PLACEHOLDER = `[
-  {
-    "name": "需求1",
-    "description": "示例需求",
-    "headers": [{ "key": "X-Lane", "value": "feature-a" }]
-  }
+    {
+        "name": "需求123",
+        "description": "示例需求",
+        "headers": {
+            "X-Lane": "feature-a"
+        }
+    }
 ]`;
-
-const DEFAULT_CODE = `// data 是解析后的 JSON；返回标准需求数组
-return data.map((item) => ({
-  id: item.id,              // 可选：外部唯一编号
-  name: item.name,
-  description: item.desc ?? '',
-  expiresAt: null,
-  headers: [],
-}));`;
 
 type Mode = 'standard' | 'custom';
 
@@ -33,6 +32,9 @@ interface SandboxPending {
   reject: (reason: Error) => void;
   timer: number;
 }
+
+/** 沙箱页本身不可用（未加载/未就绪），与用户代码报错区分 */
+class SandboxUnavailableError extends Error {}
 
 export function RequirementImportModal({
   config,
@@ -47,19 +49,22 @@ export function RequirementImportModal({
 }) {
   const [mode, setMode] = useState<Mode>('standard');
   const [jsonText, setJsonText] = useState('');
-  const [codeText, setCodeText] = useState(DEFAULT_CODE);
+  const [codeText, setCodeText] = useState(DEFAULT_PARSER_CODE);
+  const [codeStatus, setCodeStatus] = useState('');
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [rawResult, setRawResult] = useState<unknown>(null);
   const [parsing, setParsing] = useState(false);
   const [result, setResult] = useState<{ ok: number; skipped: number } | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const iframeLoadedRef = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const sandboxReady = useRef(false);
   const pendingRef = useRef<SandboxPending | null>(null);
-  // 与 options.html 同目录；由 manifest 的 sandbox.pages 声明为隔离页
-  const sandboxUrl = './sandbox.html';
+  // 绝对扩展 URL，避免相对路径在 dev/不同 options URL 下解析到错误位置
+  const sandboxUrl = browser.runtime.getURL('/sandbox.html' as never);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -106,12 +111,35 @@ export function RequirementImportModal({
     [],
   );
 
-  /** 在隔离沙箱中执行用户解析代码；5 秒超时 */
+  // 打开弹窗时恢复上次保存的解析代码
+  useEffect(() => {
+    let alive = true;
+    loadParserCode()
+      .then((code) => {
+        if (alive) setCodeText(code);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const saveCode = async () => {
+    try {
+      await saveParserCode(codeText);
+      setCodeStatus(t('import.codeSaved'));
+      window.setTimeout(() => setCodeStatus(''), 2000);
+    } catch {
+      setCodeStatus(t('import.codeSaveFailed'));
+    }
+  };
+
+  /** 在隔离沙箱中执行用户解析代码；就绪最多等 6 秒，执行最多 5 秒 */
   const runSandbox = (data: unknown, code: string) =>
     new Promise<unknown>((resolve, reject) => {
       const win = iframeRef.current?.contentWindow;
       if (!win) {
-        reject(new Error(t('import.errorSandbox')));
+        reject(new SandboxUnavailableError(t('import.errorSandboxMissing')));
         return;
       }
       const send = () => {
@@ -126,18 +154,24 @@ export function RequirementImportModal({
         win.postMessage({ type: 'hk-eval', id, data, code }, '*');
       };
       const started = Date.now();
-      // 沙箱可能还在加载：发 ping 探测，最多等 3 秒
-      win.postMessage({ type: 'hk-ping' }, '*');
       const wait = () => {
         if (sandboxReady.current) {
           send();
           return;
         }
-        if (Date.now() - started > 3000) {
-          reject(new Error(t('import.errorSandbox')));
+        if (Date.now() - started > 6000) {
+          reject(
+            new SandboxUnavailableError(
+              iframeLoadedRef.current
+                ? t('import.errorSandboxBlocked')
+                : t('import.errorSandboxMissing'),
+            ),
+          );
           return;
         }
-        window.setTimeout(wait, 60);
+        // 反复 ping：避免沙箱页晚于首次探测完成初始化导致误报
+        win.postMessage({ type: 'hk-ping' }, '*');
+        window.setTimeout(wait, 300);
       };
       wait();
     });
@@ -147,6 +181,7 @@ export function RequirementImportModal({
     setPreview(null);
     setRawResult(null);
     setResult(null);
+    setExpandedId(null);
   };
 
   const switchMode = (next: Mode) => {
@@ -166,6 +201,27 @@ export function RequirementImportModal({
 
     setParsing(true);
     try {
+      if (mode === 'custom') {
+        // 先做一次运行时自检：旧开发构建/旧 zip 可能没有 manifest sandbox 页
+        const manifest = browser.runtime.getManifest() as {
+          sandbox?: { pages?: string[] };
+        };
+        if (!manifest.sandbox?.pages?.includes('sandbox.html')) {
+          setError(t('import.errorSandboxManifest'));
+          return;
+        }
+        try {
+          const response = await fetch(sandboxUrl, { cache: 'no-store' });
+          if (!response.ok) {
+            setError(t('import.errorSandboxFile'));
+            return;
+          }
+        } catch {
+          setError(t('import.errorSandboxFile'));
+          return;
+        }
+      }
+
       const raw = mode === 'custom' ? await runSandbox(data, codeText) : data;
       const prepared = prepareRequirementImport(config, raw);
       if (!prepared) {
@@ -175,7 +231,11 @@ export function RequirementImportModal({
       setRawResult(raw);
       setPreview(prepared);
     } catch (e) {
-      setError(t('import.errorCode', { msg: e instanceof Error ? e.message : String(e) }));
+      if (e instanceof SandboxUnavailableError) {
+        setError(e.message);
+      } else {
+        setError(t('import.errorCode', { msg: e instanceof Error ? e.message : String(e) }));
+      }
     } finally {
       setParsing(false);
     }
@@ -253,60 +313,88 @@ export function RequirementImportModal({
             </button>
           </div>
 
-          <div className="import-field">
-            <div className="import-label-row">
-              <span className="import-label">{t('import.jsonLabel')}</span>
-              <button
-                type="button"
-                className="link-btn"
-                onClick={() => fileRef.current?.click()}
-              >
-                {t('import.chooseFile')}
-              </button>
-            </div>
-            <textarea
-              className="import-textarea mono"
-              value={jsonText}
-              placeholder={JSON_PLACEHOLDER}
-              spellCheck={false}
-              onChange={(e) => {
-                setJsonText(e.target.value);
-                resetOutput();
-              }}
-            />
-            <div className="import-help">
-              {mode === 'standard' ? t('import.standardHelp') : t('import.customJsonHelp')}
-            </div>
-          </div>
+          {mode === 'custom' ? (
+            <div className="import-split">
+              <div className="import-field">
+                <div className="import-label-row">
+                  <span className="import-label">{t('import.jsonLabel')}</span>
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    {t('import.chooseFile')}
+                  </button>
+                </div>
+                <textarea
+                  className="import-textarea mono"
+                  value={jsonText}
+                  placeholder={JSON_PLACEHOLDER}
+                  spellCheck={false}
+                  onChange={(e) => {
+                    setJsonText(e.target.value);
+                    resetOutput();
+                  }}
+                />
+                <div className="import-help">{t('import.customJsonHelp')}</div>
+              </div>
 
-          {mode === 'custom' && (
+              <div className="import-field">
+                <div className="import-label-row">
+                  <span className="import-label">{t('import.codeLabel')}</span>
+                  <div className="import-code-actions">
+                    {codeStatus && (
+                      <span className="import-code-status">{codeStatus}</span>
+                    )}
+                    <button
+                      type="button"
+                      className="btn import-code-save"
+                      onClick={() => void saveCode()}
+                    >
+                      {t('import.codeSave')}
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  className="import-textarea import-code mono"
+                  value={codeText}
+                  spellCheck={false}
+                  onChange={(e) => {
+                    setCodeText(e.target.value);
+                    setCodeStatus('');
+                    resetOutput();
+                  }}
+                />
+                <div className="import-help">{t('import.codeHelp')}</div>
+              </div>
+            </div>
+          ) : (
             <div className="import-field">
-              <span className="import-label">{t('import.codeLabel')}</span>
+              <div className="import-label-row">
+                <span className="import-label">{t('import.jsonLabel')}</span>
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {t('import.chooseFile')}
+                </button>
+              </div>
               <textarea
-                className="import-textarea import-code mono"
-                value={codeText}
+                className="import-textarea mono"
+                value={jsonText}
+                placeholder={JSON_PLACEHOLDER}
                 spellCheck={false}
                 onChange={(e) => {
-                  setCodeText(e.target.value);
+                  setJsonText(e.target.value);
                   resetOutput();
                 }}
               />
-              <div className="import-help">{t('import.codeHelp')}</div>
+              <div className="import-help">{t('import.standardHelp')}</div>
             </div>
           )}
 
           {error && <div className="import-error">{error}</div>}
-
-          <div className="import-toolbar">
-            <button
-              type="button"
-              className="btn"
-              disabled={parsing || !jsonText.trim()}
-              onClick={() => void handleParse()}
-            >
-              {parsing ? t('import.parsing') : t('import.parse')}
-            </button>
-          </div>
 
           {preview && (
             <div className="import-preview">
@@ -325,14 +413,48 @@ export function RequirementImportModal({
 
               {preview.accepted.length > 0 && (
                 <div className="import-list">
-                  {preview.accepted.slice(0, 8).map((requirement) => (
-                    <div className="import-item" key={requirement.id}>
-                      <span className="import-item-name">{requirement.name}</span>
-                      <span className="import-item-meta mono">
-                        {t('import.headers', { n: requirement.headers.length })}
-                      </span>
-                    </div>
-                  ))}
+                  {preview.accepted.slice(0, 8).map((requirement, index) => {
+                    const itemKey = `${requirement.id}-${index}`;
+                    const open = expandedId === itemKey;
+                    return (
+                      <div className={`import-item${open ? ' open' : ''}`} key={itemKey}>
+                        <button
+                          type="button"
+                          className="import-item-main"
+                          aria-expanded={open}
+                          onClick={() => setExpandedId(open ? null : itemKey)}
+                        >
+                          <span className="import-item-name">{requirement.name}</span>
+                          <span className="import-item-meta mono">
+                            {t('import.headers', { n: requirement.headers.length })}
+                            <span className="import-item-chevron" aria-hidden="true">
+                              ▾
+                            </span>
+                          </span>
+                        </button>
+                        {open && (
+                          <div className="import-item-headers">
+                            {requirement.headers.length === 0 ? (
+                              <span className="import-header-empty">—</span>
+                            ) : (
+                              requirement.headers.map((header, headerIndex) => (
+                                <div
+                                  className="import-header-row"
+                                  key={`${header.key}-${headerIndex}`}
+                                >
+                                  <span className="import-header-key mono">{header.key}</span>
+                                  <span className="import-header-sep" aria-hidden="true">
+                                    =
+                                  </span>
+                                  <span className="import-header-value mono">{header.value}</span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   {preview.accepted.length > 8 && (
                     <div className="import-more">
                       {t('import.more', { n: preview.accepted.length - 8 })}
@@ -399,12 +521,23 @@ export function RequirementImportModal({
               <button
                 type="button"
                 className="btn primary"
-                disabled={!preview || preview.accepted.length === 0}
-                onClick={handleImport}
+                disabled={
+                  preview
+                    ? preview.accepted.length === 0
+                    : parsing || !jsonText.trim()
+                }
+                onClick={() => {
+                  if (preview) handleImport();
+                  else void handleParse();
+                }}
               >
-                {preview && preview.accepted.length > 0
-                  ? t('import.importButton', { n: preview.accepted.length })
-                  : t('import.importButtonEmpty')}
+                {preview
+                  ? preview.accepted.length > 0
+                    ? t('import.importButton', { n: preview.accepted.length })
+                    : t('import.importButtonEmpty')
+                  : parsing
+                    ? t('import.parsing')
+                    : t('import.parse')}
               </button>
             </>
           )}
@@ -428,6 +561,9 @@ export function RequirementImportModal({
           title="HeaderKeeper parser sandbox"
           aria-hidden="true"
           tabIndex={-1}
+          onLoad={() => {
+            iframeLoadedRef.current = true;
+          }}
         />
       </div>
     </div>

@@ -15,7 +15,24 @@ export default function App() {
   const { lang, t, setLang } = useLangFromConfig(config, update);
   const [section, setSection] = useState<Section>('systems');
   const [detailSystemId, setDetailSystemId] = useState<string | null>(null);
+  const [toast, setToast] = useState(false);
+  const prevGlobalRef = useRef<boolean | undefined>(undefined);
   const queryHandledRef = useRef(false);
+
+  // 仅在全局注入从「开」切到「关」时弹一次 3 秒提示
+  useEffect(() => {
+    if (!config) return;
+    const previous = prevGlobalRef.current;
+    prevGlobalRef.current = config.globalEnabled;
+    if (previous === true && !config.globalEnabled) setToast(true);
+    if (config.globalEnabled) setToast(false);
+  }, [config?.globalEnabled]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   // 从弹窗「编辑」进入时，用 ?system=<id> 直接定位到系统详情
   useEffect(() => {
@@ -111,8 +128,6 @@ export default function App() {
             </div>
           </header>
 
-          {!config.globalEnabled && <div className="banner">{t('settings.bannerOff')}</div>}
-
           {section === 'general' ? (
             <GeneralPanel
               config={config}
@@ -164,6 +179,12 @@ export default function App() {
           </footer>
         </main>
       </div>
+
+      {toast && (
+        <div className="toast" role="status">
+          {t('settings.bannerOff')}
+        </div>
+      )}
     </div>
   );
 }

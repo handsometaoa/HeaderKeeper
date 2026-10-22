@@ -7,10 +7,13 @@ export function DomainEditor({
   domains,
   onChange,
   t,
+  invalid = false,
 }: {
   domains: string[];
   onChange: (domains: string[]) => void;
   t: T;
+  /** 外部校验（如未填写域名）时为输入框描红 */
+  invalid?: boolean;
 }) {
   const [draft, setDraft] = useState('');
   const [error, setError] = useState(false);
@@ -49,7 +52,7 @@ export function DomainEditor({
         <input
           type="text"
           value={draft}
-          className={error ? 'invalid' : ''}
+          className={error || invalid ? 'invalid' : ''}
           placeholder={t('domains.placeholder')}
           onChange={(e) => {
             setDraft(e.target.value);

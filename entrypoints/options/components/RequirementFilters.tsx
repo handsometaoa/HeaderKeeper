@@ -1,8 +1,12 @@
+import { useEffect, useState } from 'react';
 import type { T } from '@/lib/i18n';
 import type { RequirementFilter, RequirementStatus } from '@/lib/requirements';
 import { emptyRequirementFilter } from '@/lib/requirements';
 
-/** 轻量筛选条：浅色底与需求卡片区分，过期状态使用下拉 */
+/**
+ * 轻量筛选条：浅色底与需求卡片区分。
+ * 输入/下拉只修改草稿，点击「搜索」才应用；「清除」同时清空草稿和应用条件。
+ */
 export function RequirementFilters({
   value,
   onChange,
@@ -12,33 +16,54 @@ export function RequirementFilters({
   onChange: (value: RequirementFilter) => void;
   t: T;
 }) {
-  const dirty =
-    value.name.trim() !== '' || value.headerValue.trim() !== '' || value.status !== 'all';
+  const [draft, setDraft] = useState<RequirementFilter>(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  const search = () => onChange(draft);
+  const clear = () => {
+    setDraft(emptyRequirementFilter);
+    onChange(emptyRequirementFilter);
+  };
 
   return (
     <div className="filters">
       <input
         type="text"
         className="filter-input"
-        value={value.name}
+        value={draft.name}
         placeholder={t('filters.namePh')}
         aria-label={t('filters.name')}
-        onChange={(e) => onChange({ ...value, name: e.target.value })}
+        onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            search();
+          }
+        }}
       />
       <input
         type="text"
         className="filter-input"
-        value={value.headerValue}
+        value={draft.headerValue}
         placeholder={t('filters.headerValuePh')}
         aria-label={t('filters.headerValue')}
-        onChange={(e) => onChange({ ...value, headerValue: e.target.value })}
+        onChange={(e) => setDraft({ ...draft, headerValue: e.target.value })}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            search();
+          }
+        }}
       />
       <div className="filter-select">
         <select
-          value={value.status}
+          value={draft.status}
           aria-label={t('filters.status')}
           onChange={(e) =>
-            onChange({ ...value, status: e.target.value as RequirementStatus })
+            setDraft({ ...draft, status: e.target.value as RequirementStatus })
           }
         >
           <option value="all">{t('filters.all')}</option>
@@ -59,15 +84,14 @@ export function RequirementFilters({
           <path d="m6 9 6 6 6-6" />
         </svg>
       </div>
-      {dirty && (
-        <button
-          type="button"
-          className="link-btn filter-clear"
-          onClick={() => onChange(emptyRequirementFilter)}
-        >
-          {t('filters.clear')}
+      <div className="filter-actions">
+        <button type="button" className="btn primary filter-search" onClick={search}>
+          {t('filters.search')}
         </button>
-      )}
+        <button type="button" className="link-btn filter-clear" onClick={clear}>
+          {t('common.clear')}
+        </button>
+      </div>
     </div>
   );
 }

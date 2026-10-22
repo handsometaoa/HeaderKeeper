@@ -20,12 +20,13 @@ export function RequirementFormModal({
 }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [error, setError] = useState('');
+  const [nameInvalid, setNameInvalid] = useState(false);
 
   const create = () => {
     const trimmed = name.trim();
-    if (!trimmed) {
-      setError(t('requirements.nameRequired'));
+    const duplicate = config.requirements.some((item) => item.name === trimmed);
+    if (!trimmed || duplicate) {
+      setNameInvalid(true);
       return;
     }
     const result = addRequirement(config, { name: trimmed, description }, system?.id);
@@ -58,11 +59,12 @@ export function RequirementFormModal({
           <input
             type="text"
             autoFocus
+            className={nameInvalid ? 'invalid' : ''}
             value={name}
             placeholder={t('requirements.createNamePh')}
             onChange={(e) => {
               setName(e.target.value);
-              setError('');
+              setNameInvalid(false);
             }}
           />
         </label>
@@ -76,8 +78,6 @@ export function RequirementFormModal({
             onChange={(e) => setDescription(e.target.value)}
           />
         </label>
-
-        {error && <div className="form-error">{error}</div>}
 
         <div className="form-actions">
           <button type="button" className="btn" onClick={onClose}>
