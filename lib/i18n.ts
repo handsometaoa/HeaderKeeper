@@ -37,6 +37,7 @@ const zh = {
   'popup.conflictTitle': '可能存在 Header 冲突',
   'popup.conflictBy': '同时被',
   'popup.conflictSuffix': '注入，列表靠后的系统会覆盖靠前的',
+  'popup.conflictInline': '冲突：{systems}，靠后覆盖靠前',
 
   // 弹窗 · 系统卡片
   'card.none': '该系统还没有关联需求',
@@ -90,7 +91,7 @@ const zh = {
   'general.language': '界面语言',
   'general.languageDesc': '切换后立即生效，弹窗与配置页同步。',
   'general.data': '配置数据',
-  'general.dataDesc': '导出或导入完整配置（系统 + 共享需求）。',
+  'general.dataDesc': '导出或导入完整配置（系统 + 共享需求 + 自定义解析代码）。',
   'general.storage': '数据存储',
   'general.storageDesc': '所有系统、需求与配置仅保存在本地浏览器中，不会上传到任何服务器。',
 
@@ -204,6 +205,9 @@ const zh = {
   'import.title': '导入需求',
   'import.mode.standard': '标准 JSON',
   'import.mode.custom': '自定义解析',
+  'import.sourceTitle': '数据源',
+  'import.previewTitle': '解析预览',
+  'import.previewHint': '解析后在这里查看可导入项、冲突与无效数据。',
   'import.jsonLabel': '需求 JSON',
   'import.chooseFile': '选择文件',
   'import.standardHelp': '支持需求数组、单个需求对象或 { requirements: [...] }。headers 支持对象或数组；id 可省略，导入时自动生成；唯一键优先使用 id，缺省使用需求名称。',
@@ -287,6 +291,7 @@ const en: { [K in keyof typeof zh]: string } = {
   'popup.conflictTitle': 'Possible header conflict',
   'popup.conflictBy': 'is also injected by',
   'popup.conflictSuffix': '— the later system in the list wins',
+  'popup.conflictInline': 'conflict: {systems} — later wins',
 
   'card.none': 'No requirements linked to this system yet',
   'card.allExpired': 'All requirements have expired — adjust expiry in options',
@@ -338,7 +343,8 @@ const en: { [K in keyof typeof zh]: string } = {
   'general.language': 'Interface language',
   'general.languageDesc': 'Applies immediately to the popup and options page.',
   'general.data': 'Config data',
-  'general.dataDesc': 'Export or import the full config (systems + shared requirements).',
+  'general.dataDesc':
+    'Export or import the full config (systems + shared requirements + custom parser code).',
   'general.storage': 'Data storage',
   'general.storageDesc':
     'All systems, requirements and settings stay in this browser — nothing is uploaded.',
@@ -448,6 +454,9 @@ const en: { [K in keyof typeof zh]: string } = {
   'import.title': 'Import requirements',
   'import.mode.standard': 'Standard JSON',
   'import.mode.custom': 'Custom parser',
+  'import.sourceTitle': 'Source',
+  'import.previewTitle': 'Preview',
+  'import.previewHint': 'Parse to review importable items, conflicts and invalid rows here.',
   'import.jsonLabel': 'Requirements JSON',
   'import.chooseFile': 'Choose file',
   'import.standardHelp':

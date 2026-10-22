@@ -74,6 +74,7 @@ export default function App() {
   const matched = host ? matchSystems(config.systems, host) : [];
   // 多个系统同时注入同一 Header Key 时提示可能冲突
   const conflicts = host ? findHeaderConflicts(config, host) : [];
+  const firstConflict = conflicts[0];
   // 汇总当前域名下所有系统实际会注入的 Header（含来源系统，列表靠后者覆盖靠前）
   const injectingPairs = config.globalEnabled
     ? matched.flatMap((system) => {
@@ -147,20 +148,36 @@ export default function App() {
           <div className="page-hint">{t('popup.nonWeb')}</div>
         ) : (
           <>
-            <span className="host-value mono">{host}</span>
-            {conflicts.length > 0 && (
-              <div className="conflict-card">
-                <div className="conflict-title">{t('popup.conflictTitle')}</div>
-                <div className="conflict-body">
-                  {conflicts.map((conflict) => (
-                    <div key={conflict.key.toLowerCase()}>
-                      <b className="mono">{conflict.key}</b> {t('popup.conflictBy')}{' '}
-                      <b>{conflict.systems.join('、')}</b> {t('popup.conflictSuffix')}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="host-row">
+              <span className="host-value mono" title={host}>
+                {host}
+              </span>
+              {firstConflict && (
+                <span
+                  className="conflict-inline"
+                  title={[
+                    t('popup.conflictTitle'),
+                    ...conflicts.map(
+                      (conflict) =>
+                        `${conflict.key} ${t('popup.conflictBy')} ${conflict.systems.join('、')} ${t('popup.conflictSuffix')}`,
+                    ),
+                  ].join('\n')}
+                >
+                  <span className="conflict-inline-icon" aria-hidden="true">
+                    !
+                  </span>
+                  <span className="conflict-inline-key mono">{firstConflict.key}</span>
+                  <span className="conflict-inline-text">
+                    {t('popup.conflictInline', {
+                      systems: firstConflict.systems.join('、'),
+                    })}
+                  </span>
+                  {conflicts.length > 1 && (
+                    <span className="conflict-inline-more">+{conflicts.length - 1}</span>
+                  )}
+                </span>
+              )}
+            </div>
             {matched.length === 0 ? (
               <QuickCreate host={host} update={update} t={t} />
             ) : (

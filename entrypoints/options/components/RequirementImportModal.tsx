@@ -292,7 +292,13 @@ export function RequirementImportModal({
         </div>
 
         <div className="import-body">
-          <div className="import-mode" role="tablist" aria-label={t('import.title')}>
+          <section className="import-section import-source">
+            <div className="import-section-head">
+              <div className="import-step-title">
+                <span className="import-step mono">01</span>
+                <span>{t('import.sourceTitle')}</span>
+              </div>
+              <div className="import-mode" role="tablist" aria-label={t('import.title')}>
             <button
               type="button"
               role="tab"
@@ -311,7 +317,8 @@ export function RequirementImportModal({
             >
               {t('import.mode.custom')}
             </button>
-          </div>
+              </div>
+            </div>
 
           {mode === 'custom' ? (
             <div className="import-split">
@@ -394,11 +401,22 @@ export function RequirementImportModal({
             </div>
           )}
 
-          {error && <div className="import-error">{error}</div>}
+            {error && <div className="import-error">{error}</div>}
+          </section>
 
-          {preview && (
-            <div className="import-preview">
-              <div className="import-summary">
+          <section
+            className={`import-section import-preview-section${preview ? '' : ' is-empty'}`}
+          >
+            <div className="import-section-head">
+              <div className="import-step-title">
+                <span className="import-step mono">02</span>
+                <span>{t('import.previewTitle')}</span>
+              </div>
+            </div>
+
+            {preview ? (
+              <div className="import-preview">
+                <div className="import-summary">
                 <span className="import-chip">{t('import.total', { n: preview.total })}</span>
                 <span className="import-chip ok">
                   {t('import.accepted', { n: preview.accepted.length })}
@@ -499,8 +517,11 @@ export function RequirementImportModal({
                   ))}
                 </div>
               )}
-            </div>
-          )}
+              </div>
+            ) : (
+              <div className="import-preview-empty">{t('import.previewHint')}</div>
+            )}
+          </section>
         </div>
 
         <div className="import-actions">

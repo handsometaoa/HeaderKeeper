@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { browser } from '#imports';
 import { useLaneConfig } from '@/hooks/useLaneConfig';
 import { useLangFromConfig } from '@/hooks/useI18n';
+import { pruneEmptyHeaderPairs } from '@/lib/ops';
 import { AboutPanel } from './components/AboutPanel';
 import { GeneralPanel } from './components/GeneralPanel';
 import { RequirementsPanel } from './components/RequirementsPanel';
@@ -53,14 +54,26 @@ export default function App() {
   const detail = config.systems.find((s) => s.id === detailSystemId) ?? null;
   const inDetail = section === 'systems' && detail !== null;
 
+  // 离开当前编辑页面时，丢弃未写入的空 Key 行（例如重复 Key 尚未修正）
+  const leaveDraftKey = () => {
+    update((cfg) => pruneEmptyHeaderPairs(cfg));
+  };
+
   const changeSection = (next: Section) => {
+    leaveDraftKey();
     setSection(next);
     if (next === 'systems') setDetailSystemId(null);
   };
 
   const openSystem = (systemId: string) => {
+    leaveDraftKey();
     setSection('systems');
     setDetailSystemId(systemId);
+  };
+
+  const backToSystemList = () => {
+    leaveDraftKey();
+    setDetailSystemId(null);
   };
 
   const title = inDetail
@@ -143,7 +156,7 @@ export default function App() {
                 system={detail}
                 update={update}
                 t={t}
-                onBack={() => setDetailSystemId(null)}
+                onBack={backToSystemList}
                 onOpenSystem={openSystem}
               />
             ) : (

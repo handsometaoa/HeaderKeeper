@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { LangToggle } from '@/components/LangToggle';
 import { parseImportedConfig } from '@/lib/ops';
+import { loadParserCode, saveParserCode } from '@/services/parserStore';
 import type { LaneConfig } from '@/lib/types';
 import type { Update } from '@/hooks/useLaneConfig';
 import type { Language, T } from '@/lib/i18n';
@@ -20,8 +21,11 @@ export function GeneralPanel({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const exportConfig = () => {
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+  const exportConfig = async () => {
+    // 解析代码随配置一起导出，换设备/分享时自定义解析逻辑不丢失
+    const parserCode = await loadParserCode();
+    const payload = { ...config, parserCode };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -32,12 +36,20 @@ export function GeneralPanel({
 
   const importConfig = async (file: File) => {
     try {
-      const parsed = parseImportedConfig(JSON.parse(await file.text()));
+      const raw = JSON.parse(await file.text()) as unknown;
+      const parserCode =
+        raw &&
+        typeof raw === 'object' &&
+        typeof (raw as { parserCode?: unknown }).parserCode === 'string'
+          ? (raw as { parserCode: string }).parserCode
+          : null;
+      const parsed = parseImportedConfig(raw);
       if (!parsed) {
         window.alert(t('settings.importLegacy'));
         return;
       }
       if (window.confirm(t('settings.importConfirm', { n: parsed.systems.length }))) {
+        if (parserCode !== null) await saveParserCode(parserCode);
         update(() => parsed);
       }
     } catch {
@@ -64,7 +76,7 @@ export function GeneralPanel({
           <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
             {t('settings.import')}
           </button>
-          <button type="button" className="btn" onClick={exportConfig}>
+          <button type="button" className="btn" onClick={() => void exportConfig()}>
             {t('settings.export')}
           </button>
         </div>

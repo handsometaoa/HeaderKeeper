@@ -572,9 +572,14 @@ async function main() {
       return 'ok';
     })()`);
     await sleep(1200);
-    const conflictShown = await popup5.eval(
-      `document.body.innerText.includes('可能存在 Header 冲突') && document.body.innerText.includes('X-Lane')`,
-    );
+    const conflictShown = await popup5.eval(`(() => {
+      const conflict = document.querySelector('.host-row .conflict-inline');
+      const host = document.querySelector('.host-row .host-value');
+      if (!conflict || !host) return false;
+      const h = host.getBoundingClientRect();
+      const c = conflict.getBoundingClientRect();
+      return conflict.textContent.includes('X-Lane') && Math.abs(h.top - c.top) < 4 && c.left >= h.right;
+    })()`);
     const conflictDnr = await popup5.eval(
       `new Promise(res => chrome.declarativeNetRequest.getDynamicRules(r => res(r.length)))`,
     );
@@ -839,6 +844,17 @@ async function main() {
     if (!dupInvalid || lastHeader.key !== '') {
       throw new Error('重复 Header Key 未被阻止');
     }
+
+    // 离开页面：未修正的空 Key 行应被丢弃
+    await options.eval(`document.querySelectorAll('.nav-item')[1]?.click()`);
+    await sleep(500);
+    await options.eval(`document.querySelectorAll('.nav-item')[2]?.click()`);
+    await sleep(500);
+    cfg = await getConfig(options);
+    const req1AfterNav = cfg.requirements.find((r) => r.name === '需求1');
+    const emptyKeyDropped = req1AfterNav.headers.every((h) => h.key.trim() !== '');
+    console.log(`✓ 离开页面丢弃空 Key 行: ${emptyKeyDropped}`);
+    if (!emptyKeyDropped) throw new Error('离开页面后空 Key 行未丢弃');
 
     // 12.5 需求导入：标准 JSON
     await realClick(options, '.page-actions-actions .btn', 0);
@@ -1141,9 +1157,57 @@ async function main() {
       throw new Error('列表删除系统流程不符合预期');
     }
 
-    // 14. 常规设置 / 关于 / 深链
+    // 14. 常规设置 / 配置导出导入（含解析代码） / 关于 / 深链
     await options.eval(`document.querySelectorAll('.nav-item')[0]?.click()`);
     await sleep(400);
+
+    const exportedText = await options.eval(`(async () => {
+      window.__hkExport = null;
+      URL.createObjectURL = (blob) => { window.__hkExport = blob; return 'blob:hk-test'; };
+      URL.revokeObjectURL = () => {};
+      HTMLAnchorElement.prototype.click = function () {};
+      document.querySelectorAll('.general-actions .btn')[1].click();
+      for (let i = 0; i < 30 && !window.__hkExport; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return window.__hkExport ? await window.__hkExport.text() : '';
+    })()`);
+    const exportedConfig = JSON.parse(exportedText);
+    const storedParser = await options.eval(
+      `chrome.storage.local.get('parserCode').then(({parserCode}) => parserCode ?? '')`,
+    );
+    const exportHasParser = exportedConfig.parserCode === storedParser;
+    console.log(`✓ 配置导出包含解析代码: ${exportHasParser}`);
+    if (!exportHasParser) throw new Error('配置导出未包含解析代码');
+
+    const importedConfig = await options.eval(`(async () => {
+      window.confirm = () => true;
+      window.alert = () => {};
+      const current = await chrome.storage.local
+        .get('laneConfig')
+        .then(({ laneConfig }) => laneConfig);
+      const payload = { ...current, globalEnabled: false, parserCode: '// imported parser return data;' };
+      const file = new File([JSON.stringify(payload)], 'hk-smoke-config.json', {
+        type: 'application/json',
+      });
+      const input = document.querySelector('.general-page input[type="file"]');
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 900));
+      const saved = await chrome.storage.local.get(['parserCode', 'laneConfig']);
+      return JSON.stringify({
+        parserCode: saved.parserCode,
+        globalEnabled: saved.laneConfig?.globalEnabled,
+      });
+    })()`).then(JSON.parse);
+    const importRestored =
+      importedConfig.parserCode === '// imported parser return data;' &&
+      importedConfig.globalEnabled === false;
+    console.log(`✓ 配置导入恢复解析代码: ${importRestored}`);
+    if (!importRestored) throw new Error('配置导入未恢复解析代码');
+
     await realClick(options, '.lang-toggle button', 1);
     await sleep(600);
     const english = await options.eval(`document.body.innerText.includes('Interface language')`);

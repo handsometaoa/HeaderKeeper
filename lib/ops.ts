@@ -178,6 +178,18 @@ export function updatePair(
   }));
 }
 
+/** 丢弃未完成/重复未写入的 Header 行：离开页面时清理空 Key */
+export function pruneEmptyHeaderPairs(config: LaneConfig): LaneConfig {
+  let changed = false;
+  const requirements = config.requirements.map((requirement) => {
+    const headers = requirement.headers.filter((header) => header.key.trim() !== '');
+    if (headers.length === requirement.headers.length) return requirement;
+    changed = true;
+    return { ...requirement, headers };
+  });
+  return changed ? { ...config, requirements } : config;
+}
+
 export function deletePair(
   config: LaneConfig,
   requirementId: string,
