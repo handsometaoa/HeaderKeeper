@@ -22,10 +22,13 @@
   width: 232px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 22px 14px 18px;
-  background: var(--card);
-  border-right: 1px solid var(--line);
+  gap: 18px;
+  padding: 24px 14px 18px;
+  background: rgb(255 255 255 / 0.55);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+  border-right: 1px solid rgb(255 255 255 / 0.72);
+  box-shadow: 14px 0 30px -26px rgb(92 124 180 / 0.4);
   overflow-y: auto;
 }
 
@@ -44,16 +47,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 11px;
-  background: linear-gradient(140deg, var(--accent) 0%, var(--accent-deep) 100%);
+  border-radius: 12px;
+  background: var(--grad-accent);
   color: #fff;
   font-size: 17px;
-  box-shadow: 0 8px 18px -11px rgb(70 84 63 / 0.7);
+  box-shadow: 0 10px 22px -12px rgb(51 82 124 / 0.55);
 }
 
 .nav-brand-name {
   font-size: 15.5px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1.2;
 }
@@ -90,14 +93,14 @@
 }
 
 .nav-item:hover {
-  background: var(--surface-2);
+  background: rgb(255 255 255 / 0.5);
   color: var(--ink);
 }
 
 .nav-item.active {
-  background: var(--accent-soft);
+  background: linear-gradient(135deg, rgb(75 95 155 / 0.1), rgb(95 134 184 / 0.12));
   color: var(--accent-deep);
-  box-shadow: inset 3px 0 0 var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px rgb(255 255 255 / 0.6);
 }
 
 .nav-item:focus-visible {
@@ -127,7 +130,7 @@
   height: 6px;
   border-radius: 50%;
   background: var(--green);
-  box-shadow: 0 0 0 3px rgb(63 107 74 / 0.12);
+  box-shadow: 0 0 0 3px rgb(76 155 150 / 0.14);
 }
 
 .nav-foot-version {
@@ -141,11 +144,11 @@
   margin-left: 232px;
   min-height: 100vh;
   min-width: 0;
-  max-width: 1320px;
+  max-width: 1360px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 26px 32px 28px;
+  gap: 22px;
+  padding: 32px 38px 30px;
 }
 
 .content-head {
@@ -160,9 +163,10 @@
 .title-block h1 {
   margin: 0;
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.2;
+  color: var(--ink);
 }
 
 .subtitle {
@@ -186,8 +190,10 @@
   gap: 7px;
   padding: 8px 14px;
   border-radius: 999px;
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: rgb(255 255 255 / 0.58);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-line);
   box-shadow: var(--shadow-sm);
   font-size: 11px;
   color: var(--ink-2);
@@ -207,8 +213,10 @@
   gap: 8px;
   padding: 6px 8px 6px 14px;
   border-radius: 999px;
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: rgb(255 255 255 / 0.58);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-line);
   box-shadow: var(--shadow-sm);
   font-size: 11px;
   font-weight: 600;
@@ -223,11 +231,14 @@
 
 /* ---------- 通用面板 ---------- */
 .panel-card {
-  padding: 16px;
-  border-radius: 16px;
-  background: var(--card);
-  border: 1px solid var(--line);
+  padding: 20px;
+  border-radius: var(--r-lg);
+  background: var(--card-glass);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-line);
   box-shadow: var(--shadow-md);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .page-actions {
@@ -247,10 +258,31 @@
 .edit-label {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
   color: var(--ink-2);
+}
+
+.edit-label-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.edit-label-text,
+.edit-label-row > span:first-child {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.field-error {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--red);
 }
 
 .edit-row {
@@ -265,20 +297,22 @@
 }
 
 .req-empty {
-  padding: 26px;
-  border-radius: var(--r-md);
-  background: var(--card);
-  border: 1px dashed var(--line-strong);
+  padding: 28px;
+  border-radius: var(--r-lg);
+  background: rgb(255 255 255 / 0.46);
+  border: 1px dashed rgb(255 255 255 / 0.85);
   text-align: center;
   font-size: 12px;
   color: var(--ink-2);
 }
 
 .empty {
-  padding: 50px;
+  padding: 54px;
   border-radius: var(--r-lg);
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: var(--card-glass);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-line);
   box-shadow: var(--shadow-md);
   text-align: center;
   color: var(--ink-2);
@@ -364,24 +398,28 @@
 .about-page {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
 .sys-list-page {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .sys-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: var(--r-md);
-  background: var(--card);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-sm);
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: var(--r-lg);
+  background: var(--card-glass);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-line);
+  /* 同光源薄片 + 冷色阴影：卡片像悬浮在冰蓝底上 */
+  box-shadow: 0 8px 0 -6px rgb(255 255 255 / 0.26), var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .sys-row-main {
@@ -394,7 +432,7 @@
 
 .sys-row-name {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -466,12 +504,12 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #d6d9d0;
+  background: rgb(147 163 181 / 0.45);
 }
 
 .sys-dot.on {
   background: var(--green);
-  box-shadow: 0 0 0 3px rgb(63 107 74 / 0.16);
+  box-shadow: 0 0 0 3px rgb(76 155 150 / 0.16);
 }
 
 /* ---------- 系统详情：基础信息与返回按钮同一行 ---------- */
@@ -481,10 +519,12 @@
   justify-content: flex-start;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: var(--card);
-  border: 1px solid var(--line);
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  background: var(--card-glass);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-line);
   box-shadow: var(--shadow-sm);
 }
 
@@ -497,7 +537,7 @@
 
 .system-summary-name {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -519,7 +559,7 @@
 /* 删除类操作统一为红色文字 */
 .link-btn.danger {
   color: var(--red);
-  text-decoration-color: rgb(156 79 59 / 0.35);
+  text-decoration-color: rgb(169 87 71 / 0.35);
 }
 
 .link-btn.danger:hover {
@@ -563,7 +603,7 @@
 .section-title {
   margin: 0;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .count-badge {
@@ -574,11 +614,12 @@
   height: 20px;
   padding: 0 7px;
   border-radius: 999px;
-  background: var(--accent-soft);
-  border: 1px solid rgb(100 118 92 / 0.16);
+  background: rgb(255 255 255 / 0.56);
+  border: 1px solid var(--glass-line);
   color: var(--accent-deep);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
+  font-family: var(--mono);
 }
 
 .req-toolbar-actions {
@@ -593,19 +634,22 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: var(--card-2);
-  border: 1px solid var(--line);
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: rgb(255 255 255 / 0.46);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--shadow-sm);
 }
 
 .filters .filter-input {
   flex: 1 1 190px;
   min-width: 0;
-  padding: 7px 10px;
-  border: 1.5px solid var(--line);
-  border-radius: 8px;
-  background: var(--card);
+  padding: 8px 11px;
+  border: 1px solid var(--glass-line);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.6);
   font-size: 11.5px;
 }
 
@@ -619,13 +663,13 @@
 .filter-select select {
   appearance: none;
   -webkit-appearance: none;
-  border: 1.5px solid var(--line);
-  border-radius: 8px;
-  background: var(--card);
+  border: 1px solid var(--glass-line);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.6);
   color: var(--ink);
   font: inherit;
   font-size: 11.5px;
-  padding: 7px 28px 7px 10px;
+  padding: 8px 28px 8px 11px;
   cursor: pointer;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -658,64 +702,83 @@
 /* ---------- 需求卡片：瀑布流双列 ---------- */
 .req-list {
   column-count: 2;
-  column-gap: 14px;
+  column-gap: 18px;
 }
 
 .req-list > * {
   display: inline-block;
   width: 100%;
   break-inside: avoid;
-  margin: 0 0 14px;
+  margin: 0 0 18px;
+}
+
+/* 只有两条时直接左右并排，避免多列算法把它们堆在同一列 */
+.req-list:has(> :nth-child(2):last-child) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  column-count: initial;
+  gap: 18px;
+}
+
+.req-list:has(> :nth-child(2):last-child) > * {
+  display: block;
+  margin: 0;
 }
 
 .scheme-card {
-  padding: 6px 14px 12px;
-  border-radius: 16px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-md);
-  transition: box-shadow 0.15s;
+  padding: 8px 18px 14px;
+  border-radius: var(--r-lg);
+  background: var(--card-glass);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-line);
+  /* 瀑布流本身错落；再加一层向下错位的薄片，强化 Z 轴 */
+  box-shadow: 0 8px 0 -6px rgb(255 255 255 / 0.24), var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .requirement-card.active {
   outline: none;
-  box-shadow: inset 3px 0 0 var(--accent), var(--shadow-md);
+  box-shadow: inset 3px 0 0 var(--accent), 0 8px 0 -6px rgb(255 255 255 / 0.3), var(--shadow-md);
 }
 
-/* 卡片上半部分：左（名称/描述）中（引用系统）右（过期与操作） */
+/* 卡片上半部分：左侧名称/描述/引用，右侧过期状态与操作 */
 .req-card-top {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.9fr) 152px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 178px;
+  gap: 18px;
   align-items: start;
-  padding: 10px 2px;
+  padding: 12px 2px 14px;
   border-bottom: 1px solid var(--line);
 }
 
-.req-card-left {
+.req-card-main {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
-.req-card-left input[type='text'] {
+.req-card-main input[type='text'] {
   border: none;
+  border-radius: 8px;
   background: transparent;
+  box-shadow: none;
   padding: 1px 2px;
   width: 100%;
 }
 
-.req-card-left input[type='text']:focus {
-  background: var(--card-2);
-  box-shadow: none;
+.req-card-main input[type='text']:focus {
+  background: rgb(255 255 255 / 0.5);
+  box-shadow: var(--ring);
   border-color: transparent;
 }
 
 input.scheme-name {
   font-family: var(--sans);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
@@ -724,16 +787,18 @@ input.scheme-desc {
   color: var(--ink-2);
 }
 
-.req-card-center {
-  min-width: 0;
+.req-refs-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 5px;
 }
 
 .req-meta-label {
+  flex: none;
   font-size: 9.5px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: var(--ink-3);
   white-space: nowrap;
 }
@@ -743,8 +808,9 @@ input.scheme-desc {
   align-items: baseline;
   flex-wrap: wrap;
   gap: 1px;
+  min-width: 0;
   font-size: 10px;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .req-ref-link {
@@ -778,48 +844,44 @@ input.scheme-desc {
   font-size: 10px;
 }
 
-.req-card-right {
+.req-card-side {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
 }
 
 .req-badges {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
 }
 
-.req-expiry {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.req-card-right .expire-input {
+.req-card-side .expire-input {
   width: 100%;
-  padding: 4px 6px;
+  padding: 5px 7px;
   font-size: 10px;
 }
 
 .req-right-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .active-badge {
   flex: none;
   padding: 4px 12px;
   border-radius: 999px;
-  background: var(--accent-soft);
-  border: 1px solid rgb(100 118 92 / 0.2);
+  background: linear-gradient(135deg, rgb(75 95 155 / 0.1), rgb(95 134 184 / 0.14));
+  border: 1px solid rgb(255 255 255 / 0.7);
   color: var(--accent-deep);
   font-size: 10px;
-  letter-spacing: 0.06em;
-  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
 .req-remove {
@@ -835,15 +897,33 @@ input.scheme-desc {
 input[type='datetime-local'].expire-input {
   width: auto;
   padding: 6px 10px;
-  border: 1.5px solid var(--line);
+  border: 1px solid var(--glass-line);
   border-radius: var(--r-sm);
-  background: var(--card-2);
+  background: rgb(255 255 255 / 0.5);
   font-size: 11px;
   outline: none;
 }
 
 input[type='datetime-local'].expire-input:focus {
-  background: #fff;
+  background: rgb(255 255 255 / 0.86);
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+/* 卡片右侧过期时间：默认安静，悬浮/聚焦才显出输入框 */
+.req-card-side input[type='datetime-local'].expire-input {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-2);
+}
+
+.req-card-side input[type='datetime-local'].expire-input:hover {
+  background: rgb(255 255 255 / 0.44);
+  border-color: var(--glass-line);
+}
+
+.req-card-side input[type='datetime-local'].expire-input:focus {
+  background: rgb(255 255 255 / 0.82);
   border-color: var(--accent);
   box-shadow: var(--ring);
 }
@@ -919,20 +999,24 @@ input[type='datetime-local'].expire-input:focus {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgb(35 37 31 / 0.32);
+  background: rgb(26 41 60 / 0.3);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 .modal {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   width: min(560px, 100%);
   max-height: min(70vh, 560px);
-  padding: 18px;
-  border-radius: 18px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-lg);
+  padding: 24px;
+  border-radius: var(--r-lg);
+  background: rgb(255 255 255 / 0.95);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgb(255 255 255 / 0.9);
+  box-shadow: 0 30px 70px -28px rgb(22 38 60 / 0.45), 0 12px 32px -20px rgb(60 70 110 / 0.24);
 }
 
 .modal-head {
@@ -940,13 +1024,17 @@ input[type='datetime-local'].expire-input:focus {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
 }
 
 .modal-title {
   margin: 0;
   font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
 }
 
 .system-form-modal {
@@ -972,7 +1060,7 @@ input[type='datetime-local'].expire-input:focus {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding-top: 12px;
+  padding-top: 16px;
   border-top: 1px solid var(--line);
 }
 
@@ -988,10 +1076,16 @@ input[type='datetime-local'].expire-input:focus {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--card-2);
-  border: 1px solid var(--line);
+  padding: 11px 13px;
+  border-radius: var(--r-sm);
+  background: rgb(255 255 255 / 0.5);
+  border: 1px solid var(--glass-line);
+  transition: background 0.18s, box-shadow 0.18s;
+}
+
+.modal-item:hover {
+  background: rgb(255 255 255 / 0.76);
+  box-shadow: var(--shadow-sm);
 }
 
 .modal-item-main {
@@ -1001,7 +1095,7 @@ input[type='datetime-local'].expire-input:focus {
 
 .modal-item-name {
   font-size: 12.5px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .modal-item-desc {
@@ -1042,7 +1136,7 @@ input[type='datetime-local'].expire-input:focus {
 
 .panel-label {
   font-size: 12.5px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .panel-desc {
@@ -1070,9 +1164,9 @@ input[type='datetime-local'].expire-input:focus {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 26px 20px;
+  padding: 30px 20px;
   text-align: center;
-  background: linear-gradient(160deg, var(--accent-soft) 0%, var(--card) 68%);
+  background: linear-gradient(155deg, rgb(255 255 255 / 0.72) 0%, rgb(233 242 255 / 0.5) 100%);
 }
 
 .about-mark {
@@ -1081,17 +1175,17 @@ input[type='datetime-local'].expire-input:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 15px;
-  background: var(--accent);
+  border-radius: 16px;
+  background: var(--grad-accent);
   color: #fff;
   font-size: 24px;
-  box-shadow: 0 10px 24px -12px rgb(70 84 63 / 0.6);
+  box-shadow: 0 12px 26px -14px rgb(51 82 124 / 0.55);
 }
 
 .about-title {
   margin: 4px 0 0;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .about-sub {
@@ -1126,7 +1220,7 @@ input[type='datetime-local'].expire-input:focus {
 }
 
 .about-row:hover {
-  background: var(--card-2);
+  background: rgb(255 255 255 / 0.55);
 }
 
 .about-row-label {
@@ -1183,8 +1277,9 @@ input[type='datetime-local'].expire-input:focus {
   gap: 2px;
   padding: 3px;
   border-radius: 999px;
-  background: var(--card-2);
-  border: 1px solid var(--line);
+  background: rgb(255 255 255 / 0.48);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--shadow-sm);
 }
 
 .import-mode button {
@@ -1201,9 +1296,9 @@ input[type='datetime-local'].expire-input:focus {
 }
 
 .import-mode button.on {
-  background: var(--accent-soft);
+  background: linear-gradient(135deg, rgb(75 95 155 / 0.1), rgb(95 134 184 / 0.14));
   color: var(--accent-deep);
-  box-shadow: inset 0 0 0 1px rgb(100 118 92 / 0.18);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.7);
 }
 
 .import-mode button:focus-visible {
@@ -1234,21 +1329,23 @@ input[type='datetime-local'].expire-input:focus {
 .import-textarea {
   width: 100%;
   min-height: 130px;
-  padding: 10px 12px;
-  border: 1.5px solid var(--line);
+  padding: 11px 13px;
+  border: 1px solid var(--glass-line);
   border-radius: var(--r-sm);
-  background: var(--card-2);
+  background: rgb(255 255 255 / 0.5);
+  box-shadow: inset 0 1px 2px rgb(90 120 170 / 0.06);
   font-family: var(--mono);
+  font-weight: 500;
   font-size: 11px;
   line-height: 1.6;
   color: var(--ink);
   outline: none;
   resize: vertical;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
 }
 
 .import-textarea:focus {
-  background: #fff;
+  background: rgb(255 255 255 / 0.86);
   border-color: var(--accent);
   box-shadow: var(--ring);
 }
@@ -1310,9 +1407,10 @@ input[type='datetime-local'].expire-input:focus {
 }
 
 .import-error {
-  padding: 9px 12px;
-  border-radius: 10px;
-  background: var(--red-soft);
+  padding: 10px 13px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgb(255 240 236 / 0.8), rgb(255 250 245 / 0.65));
+  border: 1px solid rgb(169 87 71 / 0.22);
   color: var(--red);
   font-size: 11px;
   font-weight: 600;
@@ -1321,9 +1419,9 @@ input[type='datetime-local'].expire-input:focus {
 .import-preview {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid rgb(255 255 255 / 0.8);
 }
 
 .import-summary {
@@ -1335,21 +1433,21 @@ input[type='datetime-local'].expire-input:focus {
 .import-chip {
   padding: 3px 10px;
   border-radius: 999px;
-  background: var(--card-2);
-  border: 1px solid var(--line);
+  background: rgb(255 255 255 / 0.52);
+  border: 1px solid var(--glass-line);
   font-size: 10px;
   color: var(--ink-2);
 }
 
 .import-chip.ok {
-  background: var(--accent-soft);
-  border-color: rgb(100 118 92 / 0.18);
+  background: linear-gradient(135deg, rgb(75 95 155 / 0.09), rgb(95 134 184 / 0.12));
+  border-color: rgb(255 255 255 / 0.7);
   color: var(--accent-deep);
 }
 
 .import-chip.warn {
   background: var(--red-soft);
-  border-color: rgb(156 79 59 / 0.2);
+  border-color: rgb(169 87 71 / 0.22);
   color: var(--red);
 }
 
@@ -1362,15 +1460,15 @@ input[type='datetime-local'].expire-input:focus {
 }
 
 .import-item {
-  border-radius: 10px;
-  background: var(--card-2);
-  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: rgb(255 255 255 / 0.46);
+  border: 1px solid var(--glass-line);
   overflow: hidden;
 }
 
 .import-item.open {
-  border-color: rgb(100 118 92 / 0.3);
-  background: #fff;
+  border-color: rgb(255 255 255 / 0.85);
+  background: rgb(255 255 255 / 0.72);
 }
 
 .import-item-main {
@@ -1389,7 +1487,7 @@ input[type='datetime-local'].expire-input:focus {
 }
 
 .import-item-main:hover {
-  background: rgb(100 118 92 / 0.05);
+  background: rgb(255 255 255 / 0.4);
 }
 
 .import-item-main:focus-visible {
@@ -1399,7 +1497,7 @@ input[type='datetime-local'].expire-input:focus {
 
 .import-item-name {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .import-item-meta {
@@ -1458,7 +1556,7 @@ input[type='datetime-local'].expire-input:focus {
 
 .import-section-title {
   font-size: 10.5px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--ink-2);
 }
 
@@ -1489,8 +1587,8 @@ input[type='datetime-local'].expire-input:focus {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  border-top: 1px solid rgb(255 255 255 / 0.8);
 }
 
 .import-result {
@@ -1529,11 +1627,13 @@ input[type='datetime-local'].expire-input:focus {
   transform: translateX(-50%);
   z-index: 80;
   max-width: min(520px, calc(100vw - 48px));
-  padding: 11px 16px;
-  border-radius: 12px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--red);
+  padding: 12px 18px;
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, rgb(255 244 241 / 0.8), rgb(255 255 255 / 0.6));
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-line);
+  border-left: 2px solid #b26854;
   box-shadow: var(--shadow-lg);
   color: var(--ink-2);
   font-size: 11.5px;
@@ -1552,9 +1652,13 @@ input[type='datetime-local'].expire-input:focus {
   }
 }
 
-@media (max-width: 1270px) {
+@media (max-width: 1100px) {
   .req-list {
     column-count: 1;
+  }
+
+  .req-list:has(> :nth-child(2):last-child) {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

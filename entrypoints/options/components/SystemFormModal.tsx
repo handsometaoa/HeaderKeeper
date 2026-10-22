@@ -26,15 +26,17 @@ export function SystemFormModal({
   const [domains, setDomains] = useState<string[]>(system?.domains ?? []);
   const [nameInvalid, setNameInvalid] = useState(false);
   const [domainsInvalid, setDomainsInvalid] = useState(false);
+  const [nameError, setNameError] = useState('');
 
   const save = () => {
     const trimmed = name.trim();
-    const duplicate = config.systems.some(
-      (s) => s.id !== system?.id && s.name === trimmed,
-    );
+    const duplicate =
+      !!trimmed &&
+      config.systems.some((s) => s.id !== system?.id && s.name === trimmed);
     const invalidName = !trimmed || duplicate;
     const invalidDomains = domains.length === 0;
     setNameInvalid(invalidName);
+    setNameError(duplicate ? t('systems.nameDuplicate') : '');
     setDomainsInvalid(invalidDomains);
     if (invalidName || invalidDomains) return;
 
@@ -75,7 +77,10 @@ export function SystemFormModal({
         </div>
 
         <label className="edit-label">
-          {t('systems.name')}
+          <span className="edit-label-row">
+            <span>{t('systems.name')}</span>
+            {nameError && <span className="field-error">{nameError}</span>}
+          </span>
           <input
             type="text"
             autoFocus
@@ -85,12 +90,13 @@ export function SystemFormModal({
             onChange={(e) => {
               setName(e.target.value);
               setNameInvalid(false);
+              setNameError('');
             }}
           />
         </label>
 
         <div className="edit-label">
-          {t('systems.domains')}
+          <span className="edit-label-text">{t('systems.domains')}</span>
           <DomainEditor
             domains={domains}
             onChange={(next) => {

@@ -21,12 +21,15 @@ export function RequirementFormModal({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [nameInvalid, setNameInvalid] = useState(false);
+  const [nameError, setNameError] = useState('');
 
   const create = () => {
     const trimmed = name.trim();
-    const duplicate = config.requirements.some((item) => item.name === trimmed);
+    const duplicate =
+      !!trimmed && config.requirements.some((item) => item.name === trimmed);
     if (!trimmed || duplicate) {
       setNameInvalid(true);
+      setNameError(duplicate ? t('requirement.nameDuplicate') : '');
       return;
     }
     const result = addRequirement(config, { name: trimmed, description }, system?.id);
@@ -55,7 +58,10 @@ export function RequirementFormModal({
         </div>
 
         <label className="edit-label">
-          {t('requirement.nameLabel')}
+          <span className="edit-label-row">
+            <span>{t('requirement.nameLabel')}</span>
+            {nameError && <span className="field-error">{nameError}</span>}
+          </span>
           <input
             type="text"
             autoFocus
@@ -65,12 +71,13 @@ export function RequirementFormModal({
             onChange={(e) => {
               setName(e.target.value);
               setNameInvalid(false);
+              setNameError('');
             }}
           />
         </label>
 
         <label className="edit-label">
-          {t('requirement.descLabel')}
+          <span className="edit-label-text">{t('requirement.descLabel')}</span>
           <input
             type="text"
             value={description}

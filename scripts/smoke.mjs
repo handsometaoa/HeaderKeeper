@@ -647,6 +647,15 @@ async function main() {
       `!!document.querySelector('.system-detail') && document.querySelector('.system-summary-name')?.textContent === '运营后台A'`,
     );
     if (!detailShown) throw new Error('管理需求未进入系统详情');
+    const sideBySide = await options.eval(`(() => {
+      const cards = [...document.querySelectorAll('.system-detail .requirement-card')];
+      if (cards.length !== 2) return false;
+      const a = cards[0].getBoundingClientRect();
+      const b = cards[1].getBoundingClientRect();
+      return Math.abs(a.top - b.top) < 2 && b.left >= a.right;
+    })()`);
+    console.log(`✓ 系统详情两需求左右排列: ${sideBySide}`);
+    if (!sideBySide) throw new Error('系统详情两个需求未左右排列');
     await screenshot(options, 'smoke-system-detail.png');
 
     // 10. 新建需求（弹窗，自动关联当前系统）
@@ -681,12 +690,19 @@ async function main() {
     const dupReqInvalid = await options.eval(
       `!!document.querySelector('.req-form-modal input.invalid')`,
     );
+    const dupReqError = await options.eval(
+      `document.querySelector('.req-form-modal .field-error')?.textContent ?? ''`,
+    );
     cfg = await getConfig(options);
     console.log(
-      `✓ 新建需求重名: 描红=${dupReqInvalid}, 未创建=${cfg.requirements.length === reqCountBeforeCreate}`,
+      `✓ 新建需求重名: 描红=${dupReqInvalid}, 红字=${dupReqError}, 未创建=${cfg.requirements.length === reqCountBeforeCreate}`,
     );
-    if (!dupReqInvalid || cfg.requirements.length !== reqCountBeforeCreate) {
-      throw new Error('新建需求重名未被阻止');
+    if (
+      !dupReqInvalid ||
+      !dupReqError.includes('已存在') ||
+      cfg.requirements.length !== reqCountBeforeCreate
+    ) {
+      throw new Error('新建需求重名未被阻止或缺少红字提示');
     }
     await setInput(options, '.req-form-modal input[type="text"]', '新建共享需求', 0);
     await setInput(options, '.req-form-modal input[type="text"]', '测试用', 1);
@@ -1066,11 +1082,28 @@ async function main() {
     ) {
       throw new Error('新建系统空值描红/弹窗尺寸不符合预期');
     }
-    await setInput(options, '.system-form-modal input[type="text"]', '模态系统', 0);
+    const sysCountBeforeCreate = (await getConfig(options)).systems.length;
+    await setInput(options, '.system-form-modal input[type="text"]', '运营后台A', 0);
     await setInput(options, '.system-form-modal .domain-add input', 'modal.acme.cn', 0);
     await sleep(200);
     await realClick(options, '.system-form-modal .domain-add .btn');
     await sleep(200);
+    await realClick(options, '.system-form-modal .btn.primary');
+    await sleep(400);
+    const dupSysError = await options.eval(
+      `document.querySelector('.system-form-modal .field-error')?.textContent ?? ''`,
+    );
+    cfg = await getConfig(options);
+    console.log(
+      `✓ 新建系统重名: 红字=${dupSysError}, 未创建=${cfg.systems.length === sysCountBeforeCreate}`,
+    );
+    if (
+      !dupSysError.includes('已存在') ||
+      cfg.systems.length !== sysCountBeforeCreate
+    ) {
+      throw new Error('新建系统重名未被阻止或缺少红字提示');
+    }
+    await setInput(options, '.system-form-modal input[type="text"]', '模态系统', 0);
     await realClick(options, '.system-form-modal .btn.primary');
     await sleep(900);
     cfg = await getConfig(options);

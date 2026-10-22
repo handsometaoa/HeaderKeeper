@@ -13,7 +13,7 @@ import { HeaderPairRow } from './HeaderPairRow';
 
 /**
  * 需求卡片（瀑布流双列）：
- * 上半部分左中右三块：需求名称/描述、被引用系统、过期时间与操作。
+ * 上半部分左侧为名称/描述/引用系统，右侧为过期状态与操作；
  * 下半部分为 Header 键值表。
  */
 export function RequirementCard({
@@ -49,7 +49,7 @@ export function RequirementCard({
       data-requirement-id={requirement.id}
     >
       <div className="req-card-top">
-        <div className="req-card-left">
+        <div className="req-card-main">
           <input
             type="text"
             className="scheme-name disp"
@@ -64,57 +64,56 @@ export function RequirementCard({
             placeholder={t('requirement.descPh')}
             onChange={(e) => patch({ description: e.target.value })}
           />
-        </div>
-
-        <div className="req-card-center">
-          <div className="req-meta-label">{t('requirements.referencedBy')}</div>
-          <div className="req-refs-text">
-            {references.length === 0 ? (
-              <span className="req-refs-none">{t('requirements.orphan')}</span>
-            ) : (
-              <>
-                {visibleRefs.map((s, index) => (
-                  <span key={s.id}>
-                    {index > 0 && (
-                      <span className="req-ref-sep">{t('requirements.refSeparator')}</span>
-                    )}
-                    <button
-                      type="button"
-                      className="req-ref-link"
-                      onClick={() => onOpenSystem?.(s.id)}
-                    >
-                      {s.name || t('settings.unnamedSystem')}
-                    </button>
-                  </span>
-                ))}
-                {references.length > 4 && (
-                  <span className="req-ref-more">{t('requirements.etc')}</span>
-                )}
-              </>
-            )}
+          <div className="req-refs-row">
+            <span className="req-meta-label">{t('requirements.referencedBy')}</span>
+            <div className="req-refs-text">
+              {references.length === 0 ? (
+                <span className="req-refs-none">{t('requirements.orphan')}</span>
+              ) : (
+                <>
+                  {visibleRefs.map((s, index) => (
+                    <span key={s.id}>
+                      {index > 0 && (
+                        <span className="req-ref-sep">{t('requirements.refSeparator')}</span>
+                      )}
+                      <button
+                        type="button"
+                        className="req-ref-link"
+                        onClick={() => onOpenSystem?.(s.id)}
+                      >
+                        {s.name || t('settings.unnamedSystem')}
+                      </button>
+                    </span>
+                  ))}
+                  {references.length > 4 && (
+                    <span className="req-ref-more">{t('requirements.etc')}</span>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="req-card-right">
-          <div className="req-badges">
-            {active && (
-              <span className="active-badge mono">{t('requirement.activeBadge')}</span>
-            )}
-            {expired && (
-              <span className="expired-badge mono">{t('requirement.expiredBadge')}</span>
-            )}
-          </div>
+        <div className="req-card-side">
+          {(active || expired) && (
+            <div className="req-badges">
+              {active && (
+                <span className="active-badge mono">{t('requirement.activeBadge')}</span>
+              )}
+              {expired && (
+                <span className="expired-badge mono">{t('requirement.expiredBadge')}</span>
+              )}
+            </div>
+          )}
 
-          <div className="req-expiry">
-            <span className="req-meta-label">{t('requirement.expiresLabel')}</span>
-            <input
-              type="datetime-local"
-              className="expire-input mono"
-              value={requirement.expiresAt ?? ''}
-              title={t('requirement.expiresTitle')}
-              onChange={(e) => patch({ expiresAt: e.target.value || null })}
-            />
-          </div>
+          <input
+            type="datetime-local"
+            className="expire-input mono"
+            value={requirement.expiresAt ?? ''}
+            title={t('requirement.expiresTitle')}
+            aria-label={t('requirement.expiresLabel')}
+            onChange={(e) => patch({ expiresAt: e.target.value || null })}
+          />
 
           <div className="req-right-actions">
             {requirement.expiresAt && (
