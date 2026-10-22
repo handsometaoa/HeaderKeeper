@@ -1,13 +1,22 @@
-# HeaderKeeper · Header 注入助手
+# HeaderKeeper 2.0 · Header 注入助手
 
 基于 [WXT](https://wxt.dev) + React + TypeScript 的浏览器插件（Chrome Manifest V3）：**按域名匹配「系统」，系统引用共享需求库中的「需求」（泳道），在弹窗中一键切换，重写请求 Header**。适用于泳道测试 / 灰度发布 / 多需求并行开发。
 
 <p>
+  <img alt="Version" src="https://img.shields.io/badge/version-2.0.0-33527c">
   <img alt="WXT" src="https://img.shields.io/badge/WXT-0.21-7c3aed">
   <img alt="React" src="https://img.shields.io/badge/React-19-149eca">
   <img alt="MV3" src="https://img.shields.io/badge/Manifest-V3-4285f4">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
 </p>
+
+## 2.0 主要变化
+
+- **共享需求库**：需求从系统中独立出来，系统通过 ID 引用，可被多个系统共享；删除系统不会删除需求。
+- **需求导入**：支持标准 JSON，或写一段 JS 在隔离沙箱里把任意 JSON 转成标准格式；唯一键冲突自动跳过，解析代码可保存并随配置一起导出/导入。
+- **更完整的编辑体验**：系统/需求弹窗、重名与重复 Header Key 红框校验、删除确认、多域名批量粘贴、瀑布流需求卡片、两需求并排展示。
+- **视觉 2.0**：冰蓝灰渐变底、毛玻璃悬浮卡片、冷色柔光阴影，深靛蓝到钢蓝的渐变只作小面积点缀。
+- **配置同步**：系统、共享需求、界面语言与自定义解析代码可整体导出/导入；旧版配置首次加载会备份后重置。
 
 ## 界面
 
@@ -53,11 +62,11 @@
 - **冲突检测**：同一域名下 ≥2 个开启的系统注入相同 Key 时，在弹窗域名右侧以单行提示展示冲突 Key 与涉及系统；完整信息放在悬浮提示中。
 - **角标**：工具栏图标显示**当前标签页站点**生效的 Header 数量，未匹配的站点不显示（打开弹窗自动校正，SPA 站内导航也不会残留旧值）。
 - **需求导入**：弹窗按「数据源 / 解析预览」分区展示；支持标准需求 JSON，也支持「自定义解析」——左侧粘贴任意 JSON，右侧编写 JS 解析代码；解析代码在隔离沙箱中执行，可保存到本地、下次打开自动恢复，并随「常规设置 → 配置数据」一起导出/导入。唯一键优先使用 `id`，缺省使用需求名称，冲突项跳过并汇报；`id` 缺省时自动生成；导入数据中同名的 Header Key 也会自动去重。解析后点击任意需求可展开查看 Header Key / Value。
-- **配置导入 / 导出**：位于「常规设置 → 配置数据」，v2 JSON 格式，方便团队共享；旧版配置不做迁移，见下方说明。
+- **配置导入 / 导出**：位于「常规设置 → 配置数据」，配置 JSON（数据模型版本 2）方便团队共享；旧版配置不做迁移，见下方说明。
 
 ## 安装
 
-从 [Releases](https://github.com/handsometaoa/HeaderKeeper/releases) 下载 `*-chrome.zip` 并解压，然后在 Chrome / Edge 的 `扩展管理` 页开启「开发者模式」→「加载已解压的扩展程序」→ 选择解压后的目录。
+从 [Releases](https://github.com/handsometaoa/HeaderKeeper/releases) 下载最新 v2.0.0 的 `*-chrome.zip` 并解压，然后在 Chrome / Edge 的 `扩展管理` 页开启「开发者模式」→「加载已解压的扩展程序」→ 选择解压后的目录。
 
 ## 使用方法
 
@@ -84,6 +93,7 @@ interface LaneConfig {
 }
 
 interface SystemEntry {
+  id: string;
   name: string;                 // 系统名（唯一）
   domains: string[];            // 匹配域名（含子域名）
   enabled: boolean;             // 系统级注入开关
@@ -92,13 +102,22 @@ interface SystemEntry {
 }
 
 interface Requirement {
-  name: string;             // 需求名称
+  id: string;
+  name: string;             // 需求名称（唯一）
   description: string;      // 描述（可选）
   expiresAt: string | null; // 过期时间（本地 YYYY-MM-DDTHH:mm），null = 永久有效
   createdAt: number;        // 创建时间（毫秒时间戳），用于列表倒序
-  headers: { key: string; value: string }[]; // 注入的 Header 键值对
+  headers: HeaderPair[];    // 注入的 Header 键值对
+}
+
+interface HeaderPair {
+  id: string;
+  key: string;              // 同一需求内不可重复（不区分大小写）
+  value: string;
 }
 ```
+
+> 配置导出文件在此基础上额外携带 `parserCode` 字段，用于同步「自定义解析」的 JS 代码。
 
 > **旧版配置说明**：此版本不再迁移旧结构（`systems[].schemes` / 旧 `rules`）。首次加载新版时，旧配置会原样备份到 `chrome.storage.local` 的 `laneConfigLegacyBackup` 键，然后重置为新版默认配置。
 
@@ -138,10 +157,12 @@ lib/                      # 领域模型与纯逻辑（不依赖浏览器 API）
   ops.ts                  # 配置增删改与导入清洗
   requirements.ts         # 共享需求选择器 / 过期判断 / 筛选排序
   requirementImport.ts    # 需求导入标准化 / 唯一键冲突检查
+  headers.ts              # Header Key 去重
   conflicts.ts            # 跨系统 Key 冲突检测
   dnr.ts                  # declarativeNetRequest 规则构建
 services/                 # 浏览器平台服务
   store.ts                # 配置存储（旧结构备份后重置）
+  parserStore.ts          # 自定义解析代码存储
   sync.ts                 # DNR 动态规则串行同步
   badge.ts                # 按站点刷新工具栏角标
 hooks/                    # React hooks（useLaneConfig：加载 / 防抖保存）
@@ -156,6 +177,14 @@ scripts/                  # 图标生成 / 冒烟测试 / 网络验证
 - Header 注入使用 `declarativeNetRequest` 的 `modifyHeaders`，需声明 `<all_urls>` host 权限；本工具面向本地/内网测试，请勿发布到应用商店。
 - 多个系统命中同一域名且写入同名 Header 时，系统列表中**靠下的系统覆盖靠上的**（弹窗冲突提示会指出）。
 - Firefox 使用 `npm run build:firefox` 构建（需要 Firefox 113+，其 MV3 对 host permission 采用点击授权模式）。
+
+## 发布
+
+1. 更新 `package.json` 中的 `version`。
+2. 提交并推送 `main`。
+3. 打 tag 并推送，例如 `git tag v2.0.0 && git push origin v2.0.0`。
+
+推送 `v*` tag 后，GitHub Actions（`.github/workflows/release.yml`）会自动完成类型检查、构建、打包 `*-chrome.zip`，并创建对应的 GitHub Release。
 
 ## 作者
 - GitHub：<https://github.com/handsometaoa>
