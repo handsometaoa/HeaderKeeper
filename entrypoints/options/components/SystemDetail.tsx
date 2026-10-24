@@ -3,6 +3,7 @@ import { linkRequirement } from '@/lib/ops';
 import {
   emptyRequirementFilter,
   filterRequirements,
+  requirementExpired,
   sortRequirementsDesc,
   systemRequirements,
   systemsReferencing,
@@ -37,8 +38,11 @@ export function SystemDetail({
 
   const linked = systemRequirements(config, system);
   const filtered = filterRequirements(sortRequirementsDesc(linked), filters);
+  // 关联候选：未关联到本系统且未过期的需求
   const unlinked = config.requirements.filter(
-    (requirement) => !system.requirementIds.includes(requirement.id),
+    (requirement) =>
+      !system.requirementIds.includes(requirement.id) &&
+      !requirementExpired(requirement),
   );
 
   return (

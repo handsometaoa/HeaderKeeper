@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { requirementExpired } from '@/lib/requirements';
 import type { Requirement } from '@/lib/types';
 import type { T } from '@/lib/i18n';
 
-/** 关联已有需求：只展示尚未关联到当前系统的需求 */
+/** 关联已有需求：只展示未关联到当前系统且未过期的需求（由调用方过滤） */
 export function RequirementPicker({
   requirements,
   onLink,
@@ -70,9 +69,6 @@ export function RequirementPicker({
                 </div>
                 <div className="modal-item-desc">{requirement.description || '—'}</div>
               </div>
-              {requirementExpired(requirement) && (
-                <span className="expired-badge mono">{t('requirement.expiredBadge')}</span>
-              )}
               <button
                 type="button"
                 className="btn"

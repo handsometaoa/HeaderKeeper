@@ -69,10 +69,11 @@ export interface RequirementFilter {
   status: RequirementStatus;
 }
 
+/** 默认视图：不过滤关键词，只展示未过期需求 */
 export const emptyRequirementFilter: RequirementFilter = {
   name: '',
   headerValue: '',
-  status: 'all',
+  status: 'valid',
 };
 
 /** 按名称 / Header 值 / 过期状态筛选 */

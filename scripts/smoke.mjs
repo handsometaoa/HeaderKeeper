@@ -723,7 +723,33 @@ async function main() {
       throw new Error('新建需求/关联未生效');
     }
 
-    // 11. 关联已有需求 → 解除引用
+    // 11. 关联已有需求 → 过期需求不进候选 → 解除引用
+    // 先把 req3 置为过期，关联弹窗应没有候选
+    await options.eval(`(async () => {
+      const {laneConfig} = await chrome.storage.local.get('laneConfig');
+      laneConfig.requirements.find((r) => r.id === 'req3').expiresAt = '2020-01-01T00:00';
+      await chrome.storage.local.set({laneConfig});
+      return 'ok';
+    })()`);
+    await sleep(600);
+    await realClick(options, '.req-toolbar-actions .btn', 0);
+    await sleep(400);
+    const expiredPickerItems = await options.eval(
+      `document.querySelectorAll('.modal-item').length`,
+    );
+    if (expiredPickerItems !== 0) {
+      throw new Error(`过期需求不应出现在关联弹窗: ${expiredPickerItems}`);
+    }
+    console.log('✓ 关联弹窗过滤过期需求');
+    await realClick(options, '.modal-head .icon-btn');
+    await sleep(300);
+    await options.eval(`(async () => {
+      const {laneConfig} = await chrome.storage.local.get('laneConfig');
+      laneConfig.requirements.find((r) => r.id === 'req3').expiresAt = null;
+      await chrome.storage.local.set({laneConfig});
+      return 'ok';
+    })()`);
+    await sleep(600);
     await realClick(options, '.req-toolbar-actions .btn', 0);
     await sleep(400);
     const pickerItems = await options.eval(`document.querySelectorAll('.modal-item').length`);
@@ -799,6 +825,17 @@ async function main() {
       throw new Error('过期状态筛选不符合预期');
     }
     await realClick(options, '.filter-clear');
+    await sleep(400);
+
+    // 清除筛选回到默认视图：只展示未过期（上面被置为过期的需求应被隐藏）
+    const defaultCards = await options.eval(
+      `document.querySelectorAll('.requirement-card').length`,
+    );
+    console.log(`✓ 默认视图只展示未过期: ${defaultCards} 张`);
+    if (defaultCards !== 3) throw new Error(`默认视图应只展示未过期需求: ${defaultCards}`);
+    // 切到「全部」继续内联编辑
+    await setSelect(options, '.filter-select select', 'all');
+    await realClick(options, '.filter-search');
     await sleep(400);
 
     // 内联改名
