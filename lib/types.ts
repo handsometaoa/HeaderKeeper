@@ -44,6 +44,9 @@ export interface SystemEntry {
   activeRequirementId: string | null;
 }
 
+/** 界面主题：light 浅色 / dark 深色 / system 跟随系统 */
+export type ThemeSetting = 'light' | 'dark' | 'system';
+
 export interface LaneConfig {
   /** 配置结构版本：v2 = 共享需求库 */
   version: 2;
@@ -51,6 +54,8 @@ export interface LaneConfig {
   globalEnabled: boolean;
   /** 界面语言（zh = 中文，en = English）；缺省为 zh */
   language?: Language;
+  /** 界面主题（light = 浅色，dark = 深色，system = 跟随系统）；缺省为 system */
+  theme?: ThemeSetting;
   /** 共享需求库 */
   requirements: Requirement[];
   systems: SystemEntry[];

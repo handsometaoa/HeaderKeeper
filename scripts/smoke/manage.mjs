@@ -142,9 +142,31 @@ export async function run({ open, options }) {
     throw new Error('列表删除系统流程不符合预期');
   }
 
-  // 14. 常规设置 / 配置导出导入（含解析代码） / 关于 / 深链
+  // 14. 常规设置 / 主题切换 / 配置导出导入（含解析代码） / 关于 / 深链
   await options.eval(`document.querySelectorAll('.nav-item')[0]?.click()`);
   await sleep(400);
+
+  // 主题切换：dark 应用到 <html>，回 light 恢复
+  await options.eval(`(() => {
+    const buttons = [...document.querySelectorAll('.general-row .lang-toggle button')];
+    buttons.find((b) => b.textContent === '深色')?.click();
+    return 'ok';
+  })()`);
+  await sleep(600);
+  const darkApplied = await options.eval(
+    `document.documentElement.dataset.theme === 'dark'`,
+  );
+  await options.eval(`(() => {
+    const buttons = [...document.querySelectorAll('.general-row .lang-toggle button')];
+    buttons.find((b) => b.textContent === '浅色')?.click();
+    return 'ok';
+  })()`);
+  await sleep(600);
+  const lightApplied = await options.eval(
+    `document.documentElement.dataset.theme === 'light'`,
+  );
+  console.log(`✓ 主题切换: 深色=${darkApplied}, 浅色=${lightApplied}`);
+  if (!darkApplied || !lightApplied) throw new Error('主题切换未生效');
 
   const exportedText = await options.eval(`(async () => {
     window.__hkExport = null;

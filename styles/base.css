@@ -1,19 +1,26 @@
 :root {
   color-scheme: light;
 
+  /* 白玻璃体系：所有白色半透明面统一走 --glass-rgb × --glass-mul，
+     dark 主题只需降低 mul 与翻转文字/底色变量 */
+  --glass-rgb: 255 255 255;
+  --glass-mul: 1;
+  --grid-rgb: 50 72 102;
+  --grid-mul: 1;
+
   /* 清冷科技风：冰蓝渐变底 + 半透明毛玻璃卡片 + 少量紫蓝渐变点缀 */
   --bg: #eef2f7;
   --bg-2: #e6ecf3;
   --panel: #e9eff6;
   --card: #ffffff;
-  --card-glass: rgb(255 255 255 / 0.72);
-  --card-2: rgb(255 255 255 / 0.56);
+  --card-glass: rgb(var(--glass-rgb) / calc(0.72 * var(--glass-mul)));
+  --card-2: rgb(var(--glass-rgb) / calc(0.56 * var(--glass-mul)));
   --ink: #24313f;
   --ink-2: #4f6073;
   --ink-3: #7b8a9b;
   --line: rgb(84 108 138 / 0.22);
   --line-strong: rgb(84 108 138 / 0.36);
-  --glass-line: rgb(255 255 255 / 0.8);
+  --glass-line: rgb(var(--glass-rgb) / calc(0.8 * var(--glass-mul)));
   --accent: #5b82b4;
   --accent-deep: #33527c;
   --accent-soft: rgb(71 107 158 / 0.1);
@@ -25,10 +32,15 @@
 
   /* 大块浅色面（侧栏 / 总开关卡）：半透明玻璃，同一左上光源 */
   --surface: var(--card-glass);
-  --surface-2: rgb(255 255 255 / 0.44);
+  --surface-2: rgb(var(--glass-rgb) / calc(0.44 * var(--glass-mul)));
   --surface-3: rgb(71 107 158 / 0.08);
   --on-surface: var(--ink);
   --on-surface-2: var(--ink-2);
+
+  /* 页面底色大渐变（body） */
+  --page-glow-a: #e3ebf6;
+  --page-glow-b: #eaedf5;
+  --page-base: linear-gradient(155deg, #f3f7fb 0%, #e9eff7 46%, #dfe7f0 100%);
 
   --mono: ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, monospace;
   --sans: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -38,12 +50,59 @@
   --r-sm: 14px;
   --blur: blur(18px) saturate(140%);
   --shadow-lg: 14px 22px 32px -18px rgb(40 60 90 / 0.28),
-    5px 12px 30px -18px rgb(80 74 120 / 0.12), inset 1px 1px 0 rgb(255 255 255 / 0.9);
+    5px 12px 30px -18px rgb(80 74 120 / 0.12), inset 1px 1px 0 rgb(var(--glass-rgb) / calc(0.9 * var(--glass-mul)));
   --shadow-md: 10px 16px 30px -18px rgb(40 60 90 / 0.24),
-    4px 8px 30px -18px rgb(80 74 120 / 0.1), inset 1px 1px 0 rgb(255 255 255 / 0.85);
+    4px 8px 30px -18px rgb(80 74 120 / 0.1), inset 1px 1px 0 rgb(var(--glass-rgb) / calc(0.85 * var(--glass-mul)));
   --shadow-sm: 6px 10px 24px -17px rgb(40 60 90 / 0.2),
-    inset 1px 1px 0 rgb(255 255 255 / 0.8);
+    inset 1px 1px 0 rgb(var(--glass-rgb) / calc(0.8 * var(--glass-mul)));
   --ring: 0 0 0 3px rgb(91 130 180 / 0.2);
+}
+
+/* 深色主题：由 JS 在 <html> 上设置 data-theme="dark"（跟随系统时动态切换） */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* 白玻璃整体降透明度，呈现暗色毛玻璃质感 */
+  --glass-mul: 0.13;
+  --grid-rgb: 148 163 184;
+  --grid-mul: 2.2;
+
+  --bg: #0c1322;
+  --bg-2: #0e1728;
+  --panel: #101a2c;
+  --card: #142034;
+  --card-glass: rgb(20 32 52 / 0.78);
+  --card-2: rgb(148 163 184 / 0.09);
+  --ink: #dce5f0;
+  --ink-2: #a9b8ca;
+  --ink-3: #76869b;
+  --line: rgb(148 163 184 / 0.22);
+  --line-strong: rgb(148 163 184 / 0.4);
+  --glass-line: rgb(148 163 184 / 0.24);
+  --accent: #7ea4d4;
+  --accent-deep: #a9c5e9;
+  --accent-soft: rgb(126 164 212 / 0.14);
+  --green: #5fb0a6;
+  --red: #d6907e;
+  --red-soft: rgb(214 144 126 / 0.14);
+  --grad-accent: linear-gradient(135deg, #3c5188 0%, #4f76a8 100%);
+  --grad-warm: linear-gradient(135deg, #8a4e3e 0%, #a5714f 100%);
+
+  --surface: var(--card-glass);
+  --surface-2: rgb(148 163 184 / 0.07);
+  --surface-3: rgb(126 164 212 / 0.1);
+
+  --page-glow-a: #16223a;
+  --page-glow-b: #131e33;
+  --page-base: linear-gradient(155deg, #0d1424 0%, #0e1728 46%, #101b30 100%);
+
+  --shadow-lg: 14px 22px 32px -18px rgb(0 0 0 / 0.55),
+    5px 12px 30px -18px rgb(0 0 0 / 0.3), inset 1px 1px 0 rgb(var(--glass-rgb) / calc(0.07 * var(--glass-mul)));
+  --shadow-md: 10px 16px 30px -18px rgb(0 0 0 / 0.5),
+    4px 8px 30px -18px rgb(0 0 0 / 0.26), inset 1px 1px 0 rgb(var(--glass-rgb) / calc(0.06 * var(--glass-mul)));
+  --shadow-sm: 6px 10px 24px -17px rgb(0 0 0 / 0.45),
+    inset 1px 1px 0 rgb(var(--glass-rgb) / calc(0.06 * var(--glass-mul)));
+  --ring: 0 0 0 3px rgb(126 164 212 / 0.32);
 }
 
 * {
@@ -53,11 +112,11 @@
 body {
   margin: 0;
   background:
-    radial-gradient(1000px 680px at 6% -12%, #e3ebf6 0%, transparent 58%),
-    radial-gradient(820px 560px at 102% -6%, #eaedf5 0%, transparent 55%),
-    linear-gradient(rgb(50 72 102 / 0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(50 72 102 / 0.032) 1px, transparent 1px),
-    linear-gradient(155deg, #f3f7fb 0%, #e9eff7 46%, #dfe7f0 100%);
+    radial-gradient(1000px 680px at 6% -12%, var(--page-glow-a) 0%, transparent 58%),
+    radial-gradient(820px 560px at 102% -6%, var(--page-glow-b) 0%, transparent 55%),
+    linear-gradient(rgb(var(--grid-rgb) / calc(0.032 * var(--grid-mul))) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--grid-rgb) / calc(0.032 * var(--grid-mul))) 1px, transparent 1px),
+    var(--page-base);
   background-size: auto, auto, 44px 44px, 44px 44px, auto;
   background-attachment: fixed;
   color: var(--ink);
@@ -111,14 +170,14 @@ input[type='text'] {
   -webkit-appearance: none;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  background: rgb(255 255 255 / 0.78);
+  background: rgb(var(--glass-rgb) / calc(0.78 * var(--glass-mul)));
   box-shadow: inset 0 1px 2px rgb(90 120 170 / 0.05);
   outline: none;
   transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
 }
 
 input[type='text']:focus {
-  background: rgb(255 255 255 / 0.86);
+  background: rgb(var(--glass-rgb) / calc(0.86 * var(--glass-mul)));
   border-color: rgb(91 130 180 / 0.7);
   box-shadow: var(--ring);
 }
@@ -131,7 +190,7 @@ input[type='text']::placeholder {
 input.invalid,
 input.invalid:focus {
   border-color: var(--red);
-  background: rgb(255 255 255 / 0.9);
+  background: rgb(var(--glass-rgb) / calc(0.9 * var(--glass-mul)));
   box-shadow: 0 0 0 3px rgb(169 87 71 / 0.15);
 }
 
@@ -239,7 +298,7 @@ input[type='text'].key-input {
   padding: 8px 16px;
   border: 1px solid var(--glass-line);
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.6);
+  background: rgb(var(--glass-rgb) / calc(0.6 * var(--glass-mul)));
   -webkit-backdrop-filter: blur(12px) saturate(140%);
   backdrop-filter: blur(12px) saturate(140%);
   box-shadow: var(--shadow-sm);
@@ -251,13 +310,13 @@ input[type='text'].key-input {
 }
 
 .btn:hover {
-  background: rgb(255 255 255 / 0.9);
+  background: rgb(var(--glass-rgb) / calc(0.9 * var(--glass-mul)));
   box-shadow: var(--shadow-sm);
 }
 
 .btn.primary {
   background: var(--grad-accent);
-  border-color: rgb(255 255 255 / 0.5);
+  border-color: rgb(var(--glass-rgb) / calc(0.5 * var(--glass-mul)));
   color: #fff;
   box-shadow: 0 10px 24px -14px rgb(51 82 124 / 0.55);
 }
@@ -270,7 +329,7 @@ input[type='text'].key-input {
 
 .btn.danger {
   background: var(--red);
-  border-color: rgb(255 255 255 / 0.38);
+  border-color: rgb(var(--glass-rgb) / calc(0.38 * var(--glass-mul)));
   color: #fff;
   box-shadow: 0 10px 22px -14px rgb(169 87 71 / 0.5);
 }
@@ -335,7 +394,7 @@ input[type='text'].key-input {
   gap: 2px;
   padding: 3px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.56);
+  background: rgb(var(--glass-rgb) / calc(0.56 * var(--glass-mul)));
   border: 1px solid var(--glass-line);
   box-shadow: var(--shadow-sm);
 }

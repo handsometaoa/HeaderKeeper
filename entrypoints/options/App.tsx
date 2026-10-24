@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { browser } from '#imports';
 import { BrandMark } from '@/components/BrandMark';
 import { useLaneConfig } from '@/hooks/useLaneConfig';
+import { useTheme } from '@/hooks/useTheme';
 import { useLangFromConfig } from '@/hooks/useI18n';
 import { pruneEmptyHeaderPairs } from '@/lib/ops';
 import { AboutPanel } from './components/AboutPanel';
@@ -15,6 +16,7 @@ import { SystemsPanel } from './components/SystemsPanel';
 export default function App() {
   const { config, update } = useLaneConfig();
   const { lang, t, setLang } = useLangFromConfig(config, update);
+  useTheme(config);
   const [section, setSection] = useState<Section>('systems');
   const [detailSystemId, setDetailSystemId] = useState<string | null>(null);
   const [toast, setToast] = useState(false);

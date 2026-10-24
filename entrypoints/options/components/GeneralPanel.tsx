@@ -1,8 +1,9 @@
 import { useRef } from 'react';
 import { LangToggle } from '@/components/LangToggle';
-import { parseImportedConfig } from '@/lib/ops';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { parseImportedConfig, normalizeTheme } from '@/lib/ops';
 import { loadParserCode, saveParserCode } from '@/services/parserStore';
-import type { LaneConfig } from '@/lib/types';
+import type { LaneConfig, ThemeSetting } from '@/lib/types';
 import type { Update } from '@/hooks/useLaneConfig';
 import type { Language, T } from '@/lib/i18n';
 
@@ -65,6 +66,18 @@ export function GeneralPanel({
           <div className="panel-desc">{t('general.languageDesc')}</div>
         </div>
         <LangToggle lang={lang} onChange={setLang} title="Language / 语言" />
+      </div>
+
+      <div className="panel-card general-row">
+        <div className="general-row-main">
+          <div className="panel-label">{t('theme.label')}</div>
+          <div className="panel-desc">{t('theme.desc')}</div>
+        </div>
+        <ThemeToggle
+          value={normalizeTheme(config.theme)}
+          onChange={(theme: ThemeSetting) => update((cfg) => ({ ...cfg, theme }))}
+          t={t}
+        />
       </div>
 
       <div className="panel-card general-row">
