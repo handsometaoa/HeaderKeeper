@@ -1274,6 +1274,7 @@ input[type='datetime-local'].expire-input:focus {
 .import-section {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   gap: 12px;
   padding: 16px;
   border-radius: 18px;
@@ -1522,6 +1523,7 @@ input[type='datetime-local'].expire-input:focus {
 }
 
 .import-item {
+  flex-shrink: 0;
   border-radius: var(--r-sm);
   background: rgb(255 255 255 / 0.62);
   border: 1px solid var(--line);
