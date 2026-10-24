@@ -16,16 +16,20 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "gen:icons": "node scripts/gen-icons.mjs",
-    "smoke": "node scripts/smoke.mjs",
+    "smoke": "node scripts/smoke/index.mjs",
     "verify:net": "node scripts/verify-net.mjs",
     "compile": "tsc --noEmit",
-    "prepare": "wxt prepare"
+    "prepare": "wxt prepare",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@wxt-dev/module-react": "^1.2.2",
     "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
     "wxt": "^0.21.4"
   },
   "dependencies": {
