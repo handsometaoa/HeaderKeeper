@@ -2,7 +2,7 @@ import type { LaneConfig } from './types';
 import { matchSystems } from './domains';
 import { activeInjectableRequirement } from './requirements';
 
-export interface HeaderConflict {
+interface HeaderConflict {
   /** 冲突的 Header Key（保留首次出现的大小写） */
   key: string;
   /** 注入该 Key 的系统名（去重） */

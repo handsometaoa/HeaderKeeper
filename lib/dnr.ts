@@ -20,13 +20,13 @@ const ALL_RESOURCE_TYPES = [
   'other',
 ] as const;
 
-export interface DnrModifyHeader {
+interface DnrModifyHeader {
   header: string;
   operation: 'set';
   value: string;
 }
 
-export interface DnrRule {
+interface DnrRule {
   id: number;
   priority: number;
   condition: {

@@ -5,3 +5,5 @@ stats.html
 *.log
 smoke-*.png
 .idea
+.zcode
+.commandcode

@@ -8,11 +8,11 @@ export function requirementExpired(requirement: Requirement, now: number = Date.
 }
 
 /** 需求 id -> 需求 的索引 */
-export function requirementMap(config: LaneConfig): Map<string, Requirement> {
+function requirementMap(config: LaneConfig): Map<string, Requirement> {
   return new Map(config.requirements.map((r) => [r.id, r]));
 }
 
-export function requirementById(config: LaneConfig, id: string | null): Requirement | null {
+function requirementById(config: LaneConfig, id: string | null): Requirement | null {
   if (!id) return null;
   return config.requirements.find((r) => r.id === id) ?? null;
 }
@@ -26,7 +26,7 @@ export function systemRequirements(config: LaneConfig, system: SystemEntry): Req
 }
 
 /** 系统当前「使用中」的需求（不校验过期） */
-export function activeRequirement(config: LaneConfig, system: SystemEntry): Requirement | null {
+function activeRequirement(config: LaneConfig, system: SystemEntry): Requirement | null {
   const id = system.activeRequirementId;
   if (!id || !system.requirementIds.includes(id)) return null;
   return requirementById(config, id);

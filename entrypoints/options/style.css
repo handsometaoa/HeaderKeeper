@@ -220,10 +220,6 @@
   cursor: pointer;
 }
 
-.banner {
-  margin: 0 4px;
-}
-
 /* ---------- 通用面板 ---------- */
 .panel-card {
   padding: 20px;
@@ -272,11 +268,6 @@
   font-weight: 600;
   letter-spacing: 0;
   color: var(--red);
-}
-
-.edit-row {
-  display: flex;
-  gap: 8px;
 }
 
 .form-error {
@@ -471,21 +462,9 @@
   color: var(--accent-deep);
 }
 
-.sys-row-count {
-  flex: none;
-  font-size: 10px;
-  color: var(--ink-2);
-  white-space: nowrap;
-}
-
 .sys-row-switch,
-.sys-row-delete,
-.sys-row-chevron {
+.sys-row-delete {
   flex: none;
-}
-
-.sys-row-chevron {
-  color: var(--ink-3);
 }
 
 .sys-row-switch {
@@ -992,16 +971,6 @@ input[type='datetime-local'].expire-input:focus {
   font-size: 9.5px;
   letter-spacing: 0.04em;
   font-weight: 700;
-}
-
-.req-delete-warning {
-  margin-top: 10px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--red-soft);
-  color: var(--red);
-  font-size: 10.5px;
-  font-weight: 600;
 }
 
 /* 键值表 */

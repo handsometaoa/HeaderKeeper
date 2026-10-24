@@ -281,33 +281,6 @@ input[type='text'].key-input {
   box-shadow: 0 12px 26px -14px rgb(169 87 71 / 0.55);
 }
 
-.btn.dashed {
-  background: transparent;
-  border: 1.5px dashed var(--line-strong);
-  border-radius: var(--r-md);
-  box-shadow: none;
-  color: var(--ink-2);
-}
-
-.btn.dashed:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent-deep);
-  box-shadow: none;
-}
-
-.btn.danger-ghost {
-  background: transparent;
-  box-shadow: none;
-  color: var(--ink-2);
-}
-
-.btn.danger-ghost:hover {
-  background: var(--red-soft);
-  box-shadow: none;
-  color: var(--red);
-}
-
 .icon-btn {
   display: inline-flex;
   align-items: center;
@@ -344,21 +317,6 @@ input[type='text'].key-input {
 .link-btn:hover {
   color: var(--accent-deep);
   text-decoration-color: currentColor;
-}
-
-/* 状态提示条：中性底 + 陶土红左沿，表示「当前不生效」 */
-.banner {
-  padding: 11px 16px;
-  border-radius: var(--r-md);
-  background: linear-gradient(135deg, rgb(255 243 240 / 0.66), rgb(255 255 255 / 0.52));
-  -webkit-backdrop-filter: var(--blur);
-  backdrop-filter: var(--blur);
-  border: 1px solid var(--glass-line);
-  border-left: 2px solid #b26854;
-  color: var(--ink-2);
-  font-size: 12px;
-  font-weight: 500;
-  box-shadow: var(--shadow-sm);
 }
 
 .loading {

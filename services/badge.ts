@@ -4,7 +4,7 @@ import { activeInjectableRequirement } from '@/lib/requirements';
 import { loadConfig } from '@/services/store';
 
 /** 从 URL 提取域名（非 http/https 返回 null） */
-export function hostOf(url: string | undefined): string | null {
+function hostOf(url: string | undefined): string | null {
   if (!url) return null;
   try {
     const u = new URL(url);
@@ -15,7 +15,7 @@ export function hostOf(url: string | undefined): string | null {
 }
 
 /** 当前配置下，某个域名实际会注入的 Header 数量 */
-export function countHeadersForHost(
+function countHeadersForHost(
   config: Awaited<ReturnType<typeof loadConfig>>,
   host: string | null,
 ): number {

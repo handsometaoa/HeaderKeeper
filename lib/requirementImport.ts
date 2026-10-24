@@ -8,7 +8,7 @@ function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export type ImportKeyType = 'id' | 'name';
+type ImportKeyType = 'id' | 'name';
 
 export interface ImportConflict {
   name: string;
@@ -36,7 +36,7 @@ export interface ImportPreview {
  * 支持：需求数组 / 单个需求对象 / { requirements: [...] }。
  * 不是可识别的结构时返回 null。
  */
-export function extractCandidates(raw: unknown): unknown[] | null {
+function extractCandidates(raw: unknown): unknown[] | null {
   if (Array.isArray(raw)) return raw;
   if (isRecord(raw)) {
     if (Array.isArray(raw.requirements)) return raw.requirements;

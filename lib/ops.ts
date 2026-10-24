@@ -232,7 +232,7 @@ export function isV2Config(value: unknown): value is LaneConfig {
 }
 
 /** 清洗 v2 配置：补全字段、过滤悬空引用、保证 active 引用合法 */
-export function normalizeConfig(raw: unknown): LaneConfig {
+function normalizeConfig(raw: unknown): LaneConfig {
   const src = isRecord(raw) ? raw : {};
   const globalEnabled = src.globalEnabled !== false;
 

@@ -37,14 +37,14 @@ export function domainBase(pattern: string): string | null {
 }
 
 /** 域名模式是否命中 host（两种写法等价：命中本域与全部子域名） */
-export function hostMatchesPattern(pattern: string, host: string): boolean {
+function hostMatchesPattern(pattern: string, host: string): boolean {
   const p = domainBase(pattern);
   if (!p) return false;
   return host === p || host.endsWith(`.${p}`);
 }
 
 /** 系统是否命中 host */
-export function systemMatches(system: SystemEntry, host: string): boolean {
+function systemMatches(system: SystemEntry, host: string): boolean {
   return system.domains.some((d) => hostMatchesPattern(d, host));
 }
 
