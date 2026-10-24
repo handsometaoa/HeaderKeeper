@@ -152,6 +152,7 @@ entrypoints/              # WXT 入口
   popup/                  # 弹窗主界面（App + components/）
   options/                # 配置页（App + components/）
 lib/                      # 领域模型与纯逻辑（不依赖浏览器 API）
+  i18n/                  # 中英词典（en 缺键编译报错）+ t 函数
   types.ts                # 数据模型
   domains.ts              # 域名解析与匹配
   ops.ts                  # 配置增删改与导入清洗
@@ -166,10 +167,13 @@ services/                 # 浏览器平台服务
   sync.ts                 # DNR 动态规则串行同步
   badge.ts                # 按站点刷新工具栏角标
 hooks/                    # React hooks（useLaneConfig：加载 / 防抖保存）
-utils/                    # 通用工具（uid / format）
+utils/                    # 通用工具（uid）
 public/sandbox.html       # 需求导入的 JS 解析沙箱（无插件 API 权限）
 styles/                   # 共享样式（设计令牌与基础组件）
-scripts/                  # 图标生成 / 冒烟测试 / 网络验证
+scripts/                  # 图标生成 / 网络验证
+  lib/browser.mjs        # 冒烟共用：启动 Chrome、CDP 封装与页面操作
+  smoke/                 # 端到端冒烟用例（popup / options / imports / manage）
+tests/unit/               # lib/ 纯函数单元测试（vitest）
 ```
 
 ## 说明与限制
