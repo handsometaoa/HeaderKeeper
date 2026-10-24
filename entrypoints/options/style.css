@@ -24,10 +24,10 @@
   flex-direction: column;
   gap: 18px;
   padding: 24px 14px 18px;
-  background: rgb(255 255 255 / 0.55);
+  background: rgb(var(--glass-rgb) / calc(0.55 * var(--glass-mul)));
   -webkit-backdrop-filter: blur(22px) saturate(150%);
   backdrop-filter: blur(22px) saturate(150%);
-  border-right: 1px solid rgb(255 255 255 / 0.72);
+  border-right: 1px solid rgb(var(--glass-rgb) / calc(0.72 * var(--glass-mul)));
   box-shadow: 14px 0 30px -26px rgb(92 124 180 / 0.4);
   overflow-y: auto;
 }
@@ -88,14 +88,14 @@
 }
 
 .nav-item:hover {
-  background: rgb(255 255 255 / 0.5);
+  background: rgb(var(--glass-rgb) / calc(0.5 * var(--glass-mul)));
   color: var(--ink);
 }
 
 .nav-item.active {
   background: linear-gradient(135deg, rgb(75 95 155 / 0.1), rgb(95 134 184 / 0.12));
   color: var(--accent-deep);
-  box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px rgb(255 255 255 / 0.6);
+  box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px rgb(var(--glass-rgb) / calc(0.6 * var(--glass-mul)));
 }
 
 .nav-item:focus-visible {
@@ -185,7 +185,7 @@
   gap: 7px;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.58);
+  background: rgb(var(--glass-rgb) / calc(0.58 * var(--glass-mul)));
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   border: 1px solid var(--glass-line);
@@ -208,7 +208,7 @@
   gap: 8px;
   padding: 6px 8px 6px 14px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.58);
+  background: rgb(var(--glass-rgb) / calc(0.58 * var(--glass-mul)));
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   border: 1px solid var(--glass-line);
@@ -279,8 +279,8 @@
 .req-empty {
   padding: 28px;
   border-radius: var(--r-lg);
-  background: rgb(255 255 255 / 0.46);
-  border: 1px dashed rgb(255 255 255 / 0.85);
+  background: rgb(var(--glass-rgb) / calc(0.46 * var(--glass-mul)));
+  border: 1px dashed rgb(var(--glass-rgb) / calc(0.85 * var(--glass-mul)));
   text-align: center;
   font-size: 12px;
   color: var(--ink-2);
@@ -398,7 +398,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-line);
   /* 同光源薄片 + 冷色阴影：卡片像悬浮在冰蓝底上 */
-  box-shadow: 0 8px 0 -6px rgb(255 255 255 / 0.26), var(--shadow-sm);
+  box-shadow: 0 8px 0 -6px rgb(var(--glass-rgb) / calc(0.26 * var(--glass-mul))), var(--shadow-sm);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -642,7 +642,7 @@
   height: 20px;
   padding: 0 7px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.56);
+  background: rgb(var(--glass-rgb) / calc(0.56 * var(--glass-mul)));
   border: 1px solid var(--glass-line);
   color: var(--accent-deep);
   font-size: 10px;
@@ -664,7 +664,7 @@
   flex-wrap: wrap;
   padding: 10px 12px;
   border-radius: var(--r-md);
-  background: rgb(255 255 255 / 0.46);
+  background: rgb(var(--glass-rgb) / calc(0.46 * var(--glass-mul)));
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border: 1px solid var(--glass-line);
@@ -677,7 +677,7 @@
   padding: 8px 11px;
   border: 1px solid var(--glass-line);
   border-radius: 12px;
-  background: rgb(255 255 255 / 0.6);
+  background: rgb(var(--glass-rgb) / calc(0.6 * var(--glass-mul)));
   font-size: 11.5px;
 }
 
@@ -693,7 +693,7 @@
   -webkit-appearance: none;
   border: 1px solid var(--glass-line);
   border-radius: 12px;
-  background: rgb(255 255 255 / 0.6);
+  background: rgb(var(--glass-rgb) / calc(0.6 * var(--glass-mul)));
   color: var(--ink);
   font: inherit;
   font-size: 11.5px;
@@ -762,13 +762,13 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-line);
   /* 瀑布流本身错落；再加一层向下错位的薄片，强化 Z 轴 */
-  box-shadow: 0 8px 0 -6px rgb(255 255 255 / 0.24), var(--shadow-sm);
+  box-shadow: 0 8px 0 -6px rgb(var(--glass-rgb) / calc(0.24 * var(--glass-mul))), var(--shadow-sm);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .requirement-card.active {
   outline: none;
-  box-shadow: inset 3px 0 0 var(--accent), 0 8px 0 -6px rgb(255 255 255 / 0.3), var(--shadow-md);
+  box-shadow: inset 3px 0 0 var(--accent), 0 8px 0 -6px rgb(var(--glass-rgb) / calc(0.3 * var(--glass-mul))), var(--shadow-md);
 }
 
 /* 卡片上半部分：左侧名称/描述/引用，右侧过期状态与操作 */
@@ -798,7 +798,7 @@
 }
 
 .req-card-main input[type='text']:focus {
-  background: rgb(255 255 255 / 0.5);
+  background: rgb(var(--glass-rgb) / calc(0.5 * var(--glass-mul)));
   box-shadow: var(--ring);
   border-color: transparent;
 }
@@ -910,7 +910,7 @@ input.scheme-desc {
   padding: 4px 12px;
   border-radius: 999px;
   background: linear-gradient(135deg, rgb(75 95 155 / 0.1), rgb(95 134 184 / 0.14));
-  border: 1px solid rgb(255 255 255 / 0.7);
+  border: 1px solid rgb(var(--glass-rgb) / calc(0.7 * var(--glass-mul)));
   color: var(--accent-deep);
   font-size: 10px;
   letter-spacing: 0.04em;
@@ -932,13 +932,13 @@ input[type='datetime-local'].expire-input {
   padding: 6px 10px;
   border: 1px solid var(--glass-line);
   border-radius: var(--r-sm);
-  background: rgb(255 255 255 / 0.5);
+  background: rgb(var(--glass-rgb) / calc(0.5 * var(--glass-mul)));
   font-size: 11px;
   outline: none;
 }
 
 input[type='datetime-local'].expire-input:focus {
-  background: rgb(255 255 255 / 0.86);
+  background: rgb(var(--glass-rgb) / calc(0.86 * var(--glass-mul)));
   border-color: var(--accent);
   box-shadow: var(--ring);
 }
@@ -951,12 +951,12 @@ input[type='datetime-local'].expire-input:focus {
 }
 
 .req-card-side input[type='datetime-local'].expire-input:hover {
-  background: rgb(255 255 255 / 0.44);
+  background: rgb(var(--glass-rgb) / calc(0.44 * var(--glass-mul)));
   border-color: var(--glass-line);
 }
 
 .req-card-side input[type='datetime-local'].expire-input:focus {
-  background: rgb(255 255 255 / 0.82);
+  background: rgb(var(--glass-rgb) / calc(0.82 * var(--glass-mul)));
   border-color: var(--accent);
   box-shadow: var(--ring);
 }
@@ -1035,10 +1035,10 @@ input[type='datetime-local'].expire-input:focus {
   max-height: min(70vh, 560px);
   padding: 24px;
   border-radius: var(--r-lg);
-  background: rgb(255 255 255 / 0.95);
+  background: rgb(var(--glass-rgb) / calc(0.95 * var(--glass-mul)));
   -webkit-backdrop-filter: blur(24px) saturate(140%);
   backdrop-filter: blur(24px) saturate(140%);
-  border: 1px solid rgb(255 255 255 / 0.9);
+  border: 1px solid rgb(var(--glass-rgb) / calc(0.9 * var(--glass-mul)));
   box-shadow: 0 30px 70px -28px rgb(22 38 60 / 0.45), 0 12px 32px -20px rgb(60 70 110 / 0.24);
 }
 
@@ -1095,19 +1095,53 @@ input[type='datetime-local'].expire-input:focus {
   padding-right: 2px;
 }
 
+/* 关联需求多选：整行可点选，选中描边 */
+.picker-item {
+  width: 100%;
+  border: 1px solid var(--glass-line);
+  background: rgb(var(--glass-rgb) / calc(0.5 * var(--glass-mul)));
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.picker-item:hover {
+  background: rgb(var(--glass-rgb) / calc(0.7 * var(--glass-mul)));
+}
+
+.picker-item.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: var(--ring);
+}
+
+.picker-check {
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
 .modal-item {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 11px 13px;
   border-radius: var(--r-sm);
-  background: rgb(255 255 255 / 0.5);
+  background: rgb(var(--glass-rgb) / calc(0.5 * var(--glass-mul)));
   border: 1px solid var(--glass-line);
   transition: background 0.18s, box-shadow 0.18s;
 }
 
 .modal-item:hover {
-  background: rgb(255 255 255 / 0.76);
+  background: rgb(var(--glass-rgb) / calc(0.76 * var(--glass-mul)));
   box-shadow: var(--shadow-sm);
 }
 
@@ -1189,7 +1223,7 @@ input[type='datetime-local'].expire-input:focus {
   gap: 8px;
   padding: 30px 20px;
   text-align: center;
-  background: linear-gradient(155deg, rgb(255 255 255 / 0.72) 0%, rgb(233 242 255 / 0.5) 100%);
+  background: linear-gradient(155deg, rgb(var(--glass-rgb) / calc(0.72 * var(--glass-mul))) 0%, rgb(var(--glass-rgb) / calc(0.5 * var(--glass-mul))) 100%);
 }
 
 .about-mark {
@@ -1238,7 +1272,7 @@ input[type='datetime-local'].expire-input:focus {
 }
 
 .about-row:hover {
-  background: rgb(255 255 255 / 0.55);
+  background: rgb(var(--glass-rgb) / calc(0.55 * var(--glass-mul)));
 }
 
 .about-row-label {
@@ -1296,20 +1330,20 @@ input[type='datetime-local'].expire-input:focus {
   gap: 12px;
   padding: 16px;
   border-radius: 18px;
-  background: rgb(255 255 255 / 0.5);
+  background: rgb(var(--glass-rgb) / calc(0.5 * var(--glass-mul)));
   border: 1px solid var(--line);
 }
 
 .import-source {
-  background: rgb(255 255 255 / 0.6);
+  background: rgb(var(--glass-rgb) / calc(0.6 * var(--glass-mul)));
 }
 
 .import-preview-section {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.68), rgb(246 250 255 / 0.56));
+  background: linear-gradient(180deg, rgb(var(--glass-rgb) / calc(0.68 * var(--glass-mul))), rgb(var(--glass-rgb) / calc(0.56 * var(--glass-mul))));
 }
 
 .import-preview-section.is-empty {
-  background: rgb(255 255 255 / 0.38);
+  background: rgb(var(--glass-rgb) / calc(0.38 * var(--glass-mul)));
 }
 
 .import-section-head {
@@ -1359,7 +1393,7 @@ input[type='datetime-local'].expire-input:focus {
   gap: 2px;
   padding: 3px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.6);
+  background: rgb(var(--glass-rgb) / calc(0.6 * var(--glass-mul)));
   border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
 }
@@ -1380,7 +1414,7 @@ input[type='datetime-local'].expire-input:focus {
 .import-mode button.on {
   background: linear-gradient(135deg, rgb(75 95 155 / 0.1), rgb(95 134 184 / 0.14));
   color: var(--accent-deep);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.7);
+  box-shadow: inset 0 0 0 1px rgb(var(--glass-rgb) / calc(0.7 * var(--glass-mul)));
 }
 
 .import-mode button:focus-visible {
@@ -1415,7 +1449,7 @@ input[type='datetime-local'].expire-input:focus {
   padding: 11px 13px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  background: rgb(255 255 255 / 0.78);
+  background: rgb(var(--glass-rgb) / calc(0.78 * var(--glass-mul)));
   box-shadow: inset 0 1px 2px rgb(90 120 170 / 0.05);
   font-family: var(--mono);
   font-weight: 500;
@@ -1428,7 +1462,7 @@ input[type='datetime-local'].expire-input:focus {
 }
 
 .import-textarea:focus {
-  background: rgb(255 255 255 / 0.86);
+  background: rgb(var(--glass-rgb) / calc(0.86 * var(--glass-mul)));
   border-color: var(--accent);
   box-shadow: var(--ring);
 }
@@ -1492,7 +1526,7 @@ input[type='datetime-local'].expire-input:focus {
 .import-error {
   padding: 10px 13px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgb(255 240 236 / 0.8), rgb(255 250 245 / 0.65));
+  background: var(--red-soft);
   border: 1px solid rgb(169 87 71 / 0.22);
   color: var(--red);
   font-size: 11px;
@@ -1514,7 +1548,7 @@ input[type='datetime-local'].expire-input:focus {
 .import-chip {
   padding: 3px 10px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.52);
+  background: rgb(var(--glass-rgb) / calc(0.52 * var(--glass-mul)));
   border: 1px solid var(--glass-line);
   font-size: 10px;
   color: var(--ink-2);
@@ -1522,7 +1556,7 @@ input[type='datetime-local'].expire-input:focus {
 
 .import-chip.ok {
   background: linear-gradient(135deg, rgb(75 95 155 / 0.09), rgb(95 134 184 / 0.12));
-  border-color: rgb(255 255 255 / 0.7);
+  border-color: rgb(var(--glass-rgb) / calc(0.7 * var(--glass-mul)));
   color: var(--accent-deep);
 }
 
@@ -1543,14 +1577,14 @@ input[type='datetime-local'].expire-input:focus {
 .import-item {
   flex-shrink: 0;
   border-radius: var(--r-sm);
-  background: rgb(255 255 255 / 0.62);
+  background: rgb(var(--glass-rgb) / calc(0.62 * var(--glass-mul)));
   border: 1px solid var(--line);
   overflow: hidden;
 }
 
 .import-item.open {
   border-color: rgb(91 130 180 / 0.32);
-  background: rgb(255 255 255 / 0.82);
+  background: rgb(var(--glass-rgb) / calc(0.82 * var(--glass-mul)));
 }
 
 .import-item-main {
@@ -1569,7 +1603,7 @@ input[type='datetime-local'].expire-input:focus {
 }
 
 .import-item-main:hover {
-  background: rgb(255 255 255 / 0.4);
+  background: rgb(var(--glass-rgb) / calc(0.4 * var(--glass-mul)));
 }
 
 .import-item-main:focus-visible {
@@ -1682,7 +1716,7 @@ input[type='datetime-local'].expire-input:focus {
   justify-content: flex-end;
   gap: 8px;
   padding-top: 14px;
-  border-top: 1px solid rgb(255 255 255 / 0.8);
+  border-top: 1px solid rgb(var(--glass-rgb) / calc(0.8 * var(--glass-mul)));
 }
 
 .import-result {
@@ -1726,7 +1760,7 @@ input[type='datetime-local'].expire-input:focus {
   max-width: min(520px, calc(100vw - 48px));
   padding: 11px 16px;
   border-radius: var(--r-md);
-  background: linear-gradient(135deg, rgb(255 243 240 / 0.94), rgb(255 251 249 / 0.88));
+  background: var(--red-soft);
   -webkit-backdrop-filter: var(--blur);
   backdrop-filter: var(--blur);
   border: 1px solid rgb(169 87 71 / 0.3);

@@ -1,4 +1,4 @@
-import type { HeaderPair, LaneConfig, Requirement, SystemEntry } from './types';
+import type { HeaderPair, LaneConfig, Requirement, SystemEntry, ThemeSetting } from './types';
 import { dedupeHeaders } from './headers';
 import { normalizeDomainToken } from './domains';
 import { normalizeLanguage } from './i18n';
@@ -126,6 +126,21 @@ export function linkRequirement(
   );
 }
 
+/** 批量关联需求到系统：一次更新追加全部未关联的 id，顺序保持传入顺序 */
+export function linkRequirements(
+  config: LaneConfig,
+  systemId: string,
+  requirementIds: string[],
+): LaneConfig {
+  const known = new Set(config.requirements.map((r) => r.id));
+  const toAdd = [...new Set(requirementIds)].filter((id) => known.has(id));
+  if (toAdd.length === 0) return config;
+  return updateSystem(config, systemId, (s) => ({
+    ...s,
+    requirementIds: [...s.requirementIds, ...toAdd.filter((id) => !s.requirementIds.includes(id))],
+  }));
+}
+
 /** 从系统移出需求（仅解除引用，共享需求本身保留） */
 export function unlinkRequirement(
   config: LaneConfig,
@@ -205,6 +220,11 @@ export function deletePair(
 
 type UnknownRecord = Record<string, unknown>;
 
+/** 主题偏好归一化：非法值回退到跟随系统 */
+export function normalizeTheme(value: unknown): ThemeSetting {
+  return value === 'light' || value === 'dark' ? value : 'system';
+}
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -280,6 +300,7 @@ function normalizeConfig(raw: unknown): LaneConfig {
     version: 2,
     globalEnabled,
     language: normalizeLanguage(src.language),
+    theme: normalizeTheme(src.theme),
     requirements,
     systems,
   };

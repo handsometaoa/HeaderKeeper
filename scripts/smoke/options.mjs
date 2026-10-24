@@ -168,7 +168,7 @@ export async function run({ open }) {
     throw new Error('新建需求/关联未生效');
   }
 
-  // 11. 关联已有需求 → 过期需求不进候选 → 解除引用
+  // 11. 关联已有需求（多选）→ 过期需求不进候选 → 解除引用
   // 先把 req3 置为过期，关联弹窗应没有候选
   await options.eval(`(async () => {
     const {laneConfig} = await chrome.storage.local.get('laneConfig');
@@ -195,16 +195,39 @@ export async function run({ open }) {
     return 'ok';
   })()`);
   await sleep(600);
+  // 先移出「新建共享需求」凑出两个候选（第一张卡片即它，最新创建）
+  await realClick(options, '.req-remove', 0);
+  await sleep(700);
+  cfg = await getConfig(options);
+  if (cfg.systems.find((s) => s.id === 'sys1').requirementIds.length !== 2) {
+    throw new Error('移出新建共享需求未生效');
+  }
   await realClick(options, '.req-toolbar-actions .btn', 0);
   await sleep(400);
-  const pickerItems = await options.eval(`document.querySelectorAll('.modal-item').length`);
-  if (pickerItems !== 1) throw new Error(`关联弹窗候选数量不符合预期: ${pickerItems}`);
-  await realClick(options, '.modal-item .btn', 0);
+  // 候选 = req3 + 新建共享需求（均未关联 sys1）
+  const pickerItems = await options.eval(`document.querySelectorAll('.picker-item').length`);
+  if (pickerItems !== 2) throw new Error(`关联弹窗候选数量不符合预期: ${pickerItems}`);
+  // 多选两个 → 批量关联
+  await realClick(options, '.picker-item', 0);
+  await sleep(200);
+  await realClick(options, '.picker-item', 1);
+  await sleep(200);
+  const pickerBtnLabel = await options.eval(
+    `document.querySelector('.picker-link')?.textContent ?? ''`,
+  );
+  await realClick(options, '.picker-link');
   await sleep(700);
   cfg = await getConfig(options);
   const sysAfterLink = cfg.systems.find((s) => s.id === 'sys1');
-  if (!sysAfterLink.requirementIds.includes('req3')) throw new Error('关联已有需求未生效');
-  console.log(`✓ 关联已有需求: 系统引用 ${sysAfterLink.requirementIds.length} 个`);
+  console.log(
+    `✓ 关联已有需求(多选): 按钮="${pickerBtnLabel}", 系统引用 ${sysAfterLink.requirementIds.length} 个`,
+  );
+  if (
+    sysAfterLink.requirementIds.length !== 4 ||
+    !sysAfterLink.requirementIds.includes('req3')
+  ) {
+    throw new Error('多选批量关联未生效');
+  }
 
   await realClick(options, '.req-remove', 0);
   await sleep(700);

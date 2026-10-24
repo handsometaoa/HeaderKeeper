@@ -3,11 +3,13 @@ import {
   addSystem,
   deleteRequirement,
   linkRequirement,
+  linkRequirements,
   parseImportedConfig,
   pruneEmptyHeaderPairs,
   quickCreateSystem,
   setActiveRequirement,
   unlinkRequirement,
+  normalizeTheme,
 } from '@/lib/ops';
 import type { LaneConfig } from '@/lib/types';
 import { header, requirement, system } from './helpers';
@@ -50,6 +52,19 @@ describe('系统与需求的关联关系', () => {
     config = unlinkRequirement(config, 's1', 'r1');
     expect(config.systems[0]!.requirementIds).toEqual([]);
     expect(config.systems[0]!.activeRequirementId).toBeNull();
+  });
+
+  it('linkRequirements 批量关联：保持顺序、去重、跳过未知 id 与已关联项', () => {
+    const r1 = requirement({ id: 'r1' });
+    const r2 = requirement({ id: 'r2' });
+    const config = cfg({
+      requirements: [r1, r2],
+      systems: [system({ id: 's1', requirementIds: ['r2'] })],
+    });
+    const next = linkRequirements(config, 's1', ['r1', 'r2', 'dangling', 'r1']);
+    expect(next.systems[0]!.requirementIds).toEqual(['r2', 'r1']);
+    // 全部无效时返回原引用
+    expect(linkRequirements(config, 's1', ['dangling'])).toBe(config);
   });
 
   it('deleteRequirement 清理所有系统引用与 active，共享库移除', () => {
@@ -120,5 +135,20 @@ describe('parseImportedConfig（v2 清洗）', () => {
     expect(parsed?.systems[0]!.requirementIds).toEqual(['r1']); // 去重 + 去悬空
     expect(parsed?.systems[0]!.activeRequirementId).toBeNull();
     expect(parsed?.requirements[0]!.headers[0]).toMatchObject({ key: 'X-A', value: '1' });
+  });
+});
+
+describe('normalizeTheme', () => {
+  it('合法值原样保留', () => {
+    expect(normalizeTheme('light')).toBe('light');
+    expect(normalizeTheme('dark')).toBe('dark');
+    expect(normalizeTheme('system')).toBe('system');
+  });
+
+  it('非法值回退跟随系统', () => {
+    expect(normalizeTheme('blue')).toBe('system');
+    expect(normalizeTheme(123)).toBe('system');
+    expect(normalizeTheme(null)).toBe('system');
+    expect(normalizeTheme(undefined)).toBe('system');
   });
 });

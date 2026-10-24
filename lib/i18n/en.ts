@@ -78,6 +78,11 @@ export const en: { [K in keyof typeof zh]: string } = {
 
   'general.language': 'Interface language',
   'general.languageDesc': 'Applies immediately to the popup and options page.',
+  'theme.label': 'Theme',
+  'theme.desc': 'Light / dark / follow system. Synced between the popup and options page.',
+  'theme.light': 'Light',
+  'theme.dark': 'Dark',
+  'theme.system': 'System',
   'general.data': 'Config data',
   'general.dataDesc':
     'Export or import the full config (systems + shared requirements + custom parser code).',
@@ -128,7 +133,7 @@ export const en: { [K in keyof typeof zh]: string } = {
   'picker.title': 'Link existing requirement',
   'picker.search': 'Search requirement name or header value',
   'picker.empty': 'No requirements available to link',
-  'picker.link': 'Link',
+  'picker.linkSelected': 'Link {n} selected requirement(s)',
   'picker.close': 'Close',
 
   'requirements.new': '＋ New requirement',

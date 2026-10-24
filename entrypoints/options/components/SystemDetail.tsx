@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { linkRequirement } from '@/lib/ops';
+import { linkRequirements } from '@/lib/ops';
 import {
   emptyRequirementFilter,
   filterRequirements,
@@ -109,8 +109,8 @@ export function SystemDetail({
       {pickerOpen && (
         <RequirementPicker
           requirements={unlinked}
-          onLink={(requirementId) => {
-            update((cfg) => linkRequirement(cfg, system.id, requirementId));
+          onLink={(requirementIds) => {
+            update((cfg) => linkRequirements(cfg, system.id, requirementIds));
             setPickerOpen(false);
           }}
           onClose={() => setPickerOpen(false)}

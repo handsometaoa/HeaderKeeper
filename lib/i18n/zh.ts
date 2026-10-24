@@ -80,6 +80,11 @@ export const zh = {
   // 常规设置
   'general.language': '界面语言',
   'general.languageDesc': '切换后立即生效，弹窗与配置页同步。',
+  'theme.label': '界面主题',
+  'theme.desc': '浅色 / 深色 / 跟随系统，弹窗与配置页同步。',
+  'theme.light': '浅色',
+  'theme.dark': '深色',
+  'theme.system': '跟随系统',
   'general.data': '配置数据',
   'general.dataDesc': '导出或导入完整配置（系统 + 共享需求 + 自定义解析代码）。',
   'general.storage': '数据存储',
@@ -130,7 +135,7 @@ export const zh = {
   'picker.title': '关联已有需求',
   'picker.search': '搜索需求名称或 Header 值',
   'picker.empty': '没有可关联的需求',
-  'picker.link': '关联',
+  'picker.linkSelected': '关联所选 {n} 条需求',
   'picker.close': '关闭',
 
   // 需求管理
