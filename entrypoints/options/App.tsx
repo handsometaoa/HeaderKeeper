@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { browser } from '#imports';
+import { BrandMark } from '@/components/BrandMark';
 import { useLaneConfig } from '@/hooks/useLaneConfig';
 import { useLangFromConfig } from '@/hooks/useI18n';
 import { pruneEmptyHeaderPairs } from '@/lib/ops';
@@ -101,7 +102,7 @@ export default function App() {
       <div className="shell">
         <aside className="nav">
           <div className="nav-brand">
-            <div className="brand-mark">⇥</div>
+            <BrandMark className="brand-mark" />
             <div className="nav-brand-name disp">HeaderKeeper</div>
           </div>
           <SettingsNav section={section} onChange={changeSection} t={t} />
@@ -127,7 +128,7 @@ export default function App() {
               </span>
               <label className="pill-toggle" title={t('settings.global')}>
                 {t('settings.global')}
-                <span className="switch mini">
+                <span className="switch mini signal">
                   <input
                     type="checkbox"
                     checked={config.globalEnabled}
@@ -195,6 +196,21 @@ export default function App() {
 
       {toast && (
         <div className="toast" role="status">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
           {t('settings.bannerOff')}
         </div>
       )}

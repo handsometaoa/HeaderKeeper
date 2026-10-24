@@ -40,9 +40,6 @@ export function RequirementsPanel({
   return (
     <section className="requirements-page">
       <div className="page-actions">
-        <span className="page-count mono">
-          {t('requirements.count', { n: config.requirements.length })}
-        </span>
         <div className="page-actions-actions">
           <button
             type="button"

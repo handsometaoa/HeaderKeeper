@@ -221,6 +221,15 @@ input[type='text'].key-input {
   transform: translateX(16px);
 }
 
+/* 信号色开关：开=绿色、关=红色，用于全局注入等关键状态 */
+.switch.signal .track {
+  background: var(--red);
+}
+
+.switch.signal input:checked + .track {
+  background: var(--green);
+}
+
 /* 按钮：药丸形 */
 .btn {
   display: inline-flex;

@@ -639,12 +639,31 @@ async function main() {
     await sleep(500);
     cfg = await getConfig(options);
     const toggledOff = cfg.systems[0].enabled === false;
+    const badgeShown = await options.eval(
+      `!!document.querySelector('.sys-row .disabled-badge')`,
+    );
+    const pausedText = await options.eval(
+      `document.querySelector('.sys-row-inject')?.textContent ?? ''`,
+    );
     await realClick(options, '.sys-row-toggle', 0);
     await sleep(500);
     cfg = await getConfig(options);
     const toggledOn = cfg.systems[0].enabled !== false;
-    console.log(`✓ 系统停用/启用: 停用=${toggledOff}, 恢复=${toggledOn}`);
-    if (!toggledOff || !toggledOn) throw new Error('系统停用/启用未生效');
+    const badgeGone = await options.eval(
+      `!document.querySelector('.sys-row .disabled-badge')`,
+    );
+    const injectText = await options.eval(
+      `document.querySelector('.sys-row-inject')?.textContent ?? ''`,
+    );
+    console.log(
+      `✓ 系统停用/启用: 停用=${toggledOff}, 徽标=${badgeShown}, 停用文案="${pausedText}", 恢复=${toggledOn}, 注入文案="${injectText}"`,
+    );
+    if (!toggledOff || !toggledOn || !badgeShown || !badgeGone) {
+      throw new Error('系统停用/启用未生效');
+    }
+    if (!pausedText.includes('已停用') || !injectText.includes('未选择注入需求')) {
+      throw new Error('注入状态行文案不符合预期');
+    }
 
     await realClick(options, '.sys-row-manage', 0);
     await sleep(600);

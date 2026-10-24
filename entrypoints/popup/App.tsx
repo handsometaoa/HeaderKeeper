@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { browser } from '#imports';
+import { BrandMark } from '@/components/BrandMark';
 import { refreshBadge } from '@/services/badge';
 import { matchSystems } from '@/lib/domains';
 import { findHeaderConflicts } from '@/lib/conflicts';
@@ -30,6 +31,8 @@ export default function App() {
   const { t } = useLangFromConfig(config, update);
   const [host, setHost] = useState<string | null>(null);
   const [hostResolved, setHostResolved] = useState(false);
+  // 当前标签页标题：快捷创建系统时作为默认名称
+  const [tabTitle, setTabTitle] = useState<string | null>(null);
   // 两个分区互斥展示：命中系统多 / 注入 Header 多时避免纵向堆叠
   const [tab, setTab] = useState<PopupTab>(readStoredTab);
 
@@ -60,6 +63,7 @@ export default function App() {
         const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
         const url = tab?.url ? new URL(tab.url) : null;
         setHost(url && /^https?:$/.test(url.protocol) ? url.hostname : null);
+        setTabTitle(tab?.title?.trim() || null);
       } catch {
         setHost(null);
       }
@@ -92,7 +96,7 @@ export default function App() {
     <div className="app">
       <header className="pop-head">
         <div className="pop-brand">
-          <span className="pop-mark">⇥</span>
+          <BrandMark className="pop-mark" />
           <span className="pop-name disp">HeaderKeeper</span>
         </div>
         <button
@@ -129,7 +133,7 @@ export default function App() {
           </div>
         </div>
         <label
-          className="switch"
+          className="switch signal"
           title={config.globalEnabled ? t('master.toggleOnTitle') : t('master.toggleOffTitle')}
         >
           <input
@@ -179,7 +183,7 @@ export default function App() {
               )}
             </div>
             {matched.length === 0 ? (
-              <QuickCreate host={host} update={update} t={t} />
+              <QuickCreate host={host} tabTitle={tabTitle} update={update} t={t} />
             ) : (
               <>
                 <div className="tabs-sticky">

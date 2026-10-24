@@ -1,4 +1,5 @@
 import { browser } from '#imports';
+import { BrandMark } from '@/components/BrandMark';
 import type { T } from '@/lib/i18n';
 
 const REPO = 'https://github.com/handsometaoa/HeaderKeeper';
@@ -9,7 +10,7 @@ export function AboutPanel({ t }: { t: T }) {
   return (
     <section className="about-page">
       <div className="panel-card about-hero">
-        <div className="about-mark">⇥</div>
+        <BrandMark className="about-mark" />
         <h2 className="about-title disp">HeaderKeeper</h2>
         <p className="about-sub">{t('about.sub')}</p>
         <div className="about-meta mono">

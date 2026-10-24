@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { deleteSystem, setSystemEnabled } from '@/lib/ops';
-import type { LaneConfig, SystemEntry } from '@/lib/types';
+import { requirementExpired } from '@/lib/requirements';
+import type { LaneConfig, Requirement, SystemEntry } from '@/lib/types';
 import type { T } from '@/lib/i18n';
 import type { Update } from '@/hooks/useLaneConfig';
 import { ConfirmModal } from './ConfirmModal';
@@ -8,6 +9,8 @@ import { SystemFormModal } from './SystemFormModal';
 
 function SystemRow({
   system,
+  requirements,
+  globalEnabled,
   update,
   t,
   onOpen,
@@ -15,6 +18,8 @@ function SystemRow({
   onDelete,
 }: {
   system: SystemEntry;
+  requirements: Requirement[];
+  globalEnabled: boolean;
   update: Update;
   t: T;
   onOpen: (systemId: string) => void;
@@ -22,20 +27,73 @@ function SystemRow({
   onDelete: (system: SystemEntry) => void;
 }) {
   const enabled = system.enabled !== false;
+  const activeRequirement = system.activeRequirementId
+    ? requirements.find((r) => r.id === system.activeRequirementId) ?? null
+    : null;
+  const globalOff = globalEnabled ? '' : t('systems.globalOffSuffix');
+
+  let injectText: string;
+  if (!enabled) {
+    injectText = t('systems.injectPaused');
+  } else if (!activeRequirement) {
+    injectText = t('systems.noActive') + globalOff;
+  } else {
+    const expiredSuffix = requirementExpired(activeRequirement)
+      ? `（${t('requirement.expiredBadge')}）`
+      : '';
+    injectText =
+      t('systems.injecting', { name: activeRequirement.name }) + expiredSuffix + globalOff;
+  }
+
+  const visibleDomains = system.domains.slice(0, 2);
+  const hiddenDomains = system.domains.length - visibleDomains.length;
+
   return (
     <div className="sys-row">
-      <span className={`sys-dot${enabled && system.activeRequirementId ? ' on' : ''}`} />
+      <label
+        className="switch mini sys-row-switch"
+        title={enabled ? t('systems.disable') : t('systems.enable')}
+      >
+        <input
+          type="checkbox"
+          className="sys-row-toggle"
+          checked={enabled}
+          onChange={(e) => update((cfg) => setSystemEnabled(cfg, system.id, e.target.checked))}
+        />
+        <span className="track" />
+      </label>
+
       <div className="sys-row-main">
-        <span className="sys-row-name disp">{system.name || t('settings.unnamedSystem')}</span>
+        <span className="sys-row-name-line">
+          <span className="sys-row-name disp">
+            {system.name || t('settings.unnamedSystem')}
+          </span>
+          {!enabled && (
+            <span className="disabled-badge mono">{t('systems.disabledBadge')}</span>
+          )}
+        </span>
+        <button type="button" className="sys-row-inject" onClick={() => onOpen(system.id)}>
+          {injectText}
+        </button>
         <span className="sys-row-domains">
           {system.domains.length === 0 ? (
             <span className="sys-row-nodomains">{t('domains.empty')}</span>
           ) : (
-            system.domains.map((domain) => (
-              <span className="domain-chip mini mono" key={domain}>
-                {domain}
-              </span>
-            ))
+            <>
+              {visibleDomains.map((domain) => (
+                <span className="domain-chip mini mono" key={domain}>
+                  {domain}
+                </span>
+              ))}
+              {hiddenDomains > 0 && (
+                <span
+                  className="domain-chip mini mono sys-row-domains-more"
+                  title={system.domains.join('\n')}
+                >
+                  +{hiddenDomains}
+                </span>
+              )}
+            </>
           )}
         </span>
       </div>
@@ -53,16 +111,7 @@ function SystemRow({
           className="sys-row-action sys-row-edit"
           onClick={() => onEdit(system)}
         >
-          {t('systems.editTitle')}
-        </button>
-        <button
-          type="button"
-          className="sys-row-action sys-row-toggle"
-          onClick={() =>
-            update((cfg) => setSystemEnabled(cfg, system.id, !enabled))
-          }
-        >
-          {enabled ? t('systems.disable') : t('systems.enable')}
+          {t('systems.editAction')}
         </button>
         <button
           type="button"
@@ -70,7 +119,7 @@ function SystemRow({
           title={t('systems.deleteTitle', { name: system.name })}
           onClick={() => onDelete(system)}
         >
-          {t('systems.delete')}
+          {t('systems.deleteAction')}
         </button>
       </div>
     </div>
@@ -110,7 +159,6 @@ export function SystemsPanel({
   return (
     <section className="systems-page">
       <div className="page-actions">
-        <span className="page-count mono">{t('systems.count', { n: config.systems.length })}</span>
         <button type="button" className="btn primary" onClick={openCreate}>
           {t('systems.new')}
         </button>
@@ -124,6 +172,8 @@ export function SystemsPanel({
             <SystemRow
               key={system.id}
               system={system}
+              requirements={config.requirements}
+              globalEnabled={config.globalEnabled}
               update={update}
               t={t}
               onOpen={onOpenSystem}

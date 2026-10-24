@@ -9,14 +9,17 @@ function openOptions() {
 
 export function QuickCreate({
   host,
+  tabTitle,
   update,
   t,
 }: {
   host: string;
+  /** 当前标签页标题，作为系统名称默认值；拿不到时为 null */
+  tabTitle?: string | null;
   update: Update;
   t: T;
 }) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(tabTitle ?? '');
   return (
     <section className="quick">
       <div className="qc-title disp">{t('quick.title')}</div>

@@ -95,34 +95,32 @@ export function RequirementCard({
         </div>
 
         <div className="req-card-side">
-          {(active || expired) && (
-            <div className="req-badges">
-              {active && (
-                <span className="active-badge mono">{t('requirement.activeBadge')}</span>
-              )}
-              {expired && (
-                <span className="expired-badge mono">{t('requirement.expiredBadge')}</span>
-              )}
-            </div>
-          )}
-
-          <input
-            type="datetime-local"
-            className="expire-input mono"
-            value={requirement.expiresAt ?? ''}
-            title={t('requirement.expiresTitle')}
-            aria-label={t('requirement.expiresLabel')}
-            onChange={(e) => patch({ expiresAt: e.target.value || null })}
-          />
+          <div className="req-expire-row">
+            {/* 使用中 / 已过期互斥：过期后实际已停止注入，只显示「已过期」 */}
+            {expired ? (
+              <span className="expired-badge mono">{t('requirement.expiredBadge')}</span>
+            ) : active ? (
+              <span className="active-badge mono">{t('requirement.activeBadge')}</span>
+            ) : null}
+            <input
+              type="datetime-local"
+              className="expire-input mono"
+              value={requirement.expiresAt ?? ''}
+              title={t('requirement.expiresTitle')}
+              aria-label={t('requirement.expiresLabel')}
+              onChange={(e) => patch({ expiresAt: e.target.value || null })}
+            />
+          </div>
 
           <div className="req-right-actions">
             {requirement.expiresAt && (
               <button
                 type="button"
                 className="link-btn"
+                title={t('requirement.clearExpiresTitle')}
                 onClick={() => patch({ expiresAt: null })}
               >
-                {t('common.clear')}
+                {t('requirement.clearExpires')}
               </button>
             )}
             {system ? (
