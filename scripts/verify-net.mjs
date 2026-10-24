@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import crypto from 'node:crypto';
+import { resolveChromePath } from './lib/browser.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const EXT_DIR = resolve(import.meta.dirname, '../.output/chrome-mv3');
@@ -77,7 +78,7 @@ const config = {
 
 const profile = mkdtempSync(join(tmpdir(), 'e2e-net-'));
 const proc = spawn(
-  'C:/Users/Wgoto/AppData/Local/ChromeForTesting/chrome.exe',
+  resolveChromePath(),
   ['--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run', `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`, `--load-extension=${EXT_DIR}`, 'about:blank'],
   { stdio: 'ignore' },
 );

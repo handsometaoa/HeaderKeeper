@@ -142,7 +142,7 @@ npm run zip        # 打包 zip（发布用）
 
 ### 冒烟测试
 
-`npm run smoke` 用全新临时 profile 启动无头 Chrome for Testing（默认路径 `C:/Users/Wgoto/AppData/Local/ChromeForTesting/chrome.exe`，可用 `CHROME_PATH` 覆盖），端到端验证：旧配置备份/重置、Popup 默认 Tab 与记忆、需求切换、DNR 规则生成/清理、三层开关、角标按站点显示、需求过期、未匹配快捷创建、Key 冲突提示、系统详情改名/多域名、新建/关联/移出需求、需求筛选与内联编辑、重复 Header Key 描红与重名需求拦截、离开页面丢弃空 Key 行、必填项描红、删除需求/系统确认弹窗、导入预览 Header 展开、解析代码保存与保存按钮、配置导出/导入包含解析代码、左右栏对齐、标准/自定义需求导入与唯一键冲突、共享需求删除、语言切换、关于页与深链定位，并输出截图。运行前请先 `npm run build`。
+`npm run smoke` 用全新临时 profile 启动无头 Chrome（自动探测系统安装的 Chrome，Windows/macOS/Linux 均可；可用 `CHROME_PATH` 覆盖探测结果），端到端验证：旧配置备份/重置、Popup 默认 Tab 与记忆、需求切换、DNR 规则生成/清理、三层开关、角标按站点显示、需求过期、未匹配快捷创建、Key 冲突提示、系统详情改名/多域名、新建/关联/移出需求、需求筛选与内联编辑、重复 Header Key 描红与重名需求拦截、离开页面丢弃空 Key 行、必填项描红、删除需求/系统确认弹窗、导入预览 Header 展开、解析代码保存与保存按钮、配置导出/导入包含解析代码、左右栏对齐、标准/自定义需求导入与唯一键冲突、共享需求删除、语言切换、关于页与深链定位，并输出截图。运行前请先 `npm run build`。
 
 ## 项目结构
 

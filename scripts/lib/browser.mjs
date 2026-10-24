@@ -1,9 +1,44 @@
 // 冒烟测试共用的浏览器控制工具：启动 Chrome、CDP 封装与页面操作
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { writeFileSync } from 'node:fs';
 import crypto from 'node:crypto';
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** 按平台探测可用的 Chrome（扩展加载需要完整 Chrome，不能用 chromium headless shell） */
+export function resolveChromePath() {
+  const candidates = [];
+  if (process.env.CHROME_PATH) candidates.push(process.env.CHROME_PATH);
+  if (process.platform === 'win32') {
+    const pf = process.env['ProgramFiles'] ?? 'C:/Program Files';
+    const pf86 = process.env['ProgramFiles(x86)'] ?? 'C:/Program Files (x86)';
+    const local = process.env.LOCALAPPDATA;
+    candidates.push(
+      `${pf}/Google/Chrome/Application/chrome.exe`,
+      `${pf86}/Google/Chrome/Application/chrome.exe`,
+      local ? `${local}/Google/Chrome/Application/chrome.exe` : null,
+      // 本机手动下载的 Chrome for Testing（无固定安装位置，按常见目录探测）
+      local ? `${local}/ChromeForTesting/chrome.exe` : null,
+    );
+  } else if (process.platform === 'darwin') {
+    candidates.push('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
+  } else {
+    candidates.push(
+      '/usr/bin/google-chrome',
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/chromium',
+      '/usr/bin/chromium-browser',
+    );
+  }
+  const found = candidates.find((p) => p && existsSync(p));
+  if (!found) {
+    throw new Error(
+      '未找到 Chrome：请安装 Google Chrome，或用环境变量 CHROME_PATH 指定浏览器路径',
+    );
+  }
+  return found;
+}
 
 // 未打包插件的 ID = 路径(UTF-16LE) SHA256 前 16 字节，hex 0-f 映射为 a-p
 export function extensionId(absPath) {
