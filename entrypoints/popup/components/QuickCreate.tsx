@@ -14,12 +14,12 @@ export function QuickCreate({
   t,
 }: {
   host: string;
-  /** 当前标签页标题，作为系统名称默认值；拿不到时为 null */
+  /** 当前标签页标题：用户未输入名称时作为默认系统名；拿不到时为 null */
   tabTitle?: string | null;
   update: Update;
   t: T;
 }) {
-  const [name, setName] = useState(tabTitle ?? '');
+  const [name, setName] = useState('');
   return (
     <section className="quick">
       <div className="qc-title disp">{t('quick.title')}</div>
@@ -36,7 +36,7 @@ export function QuickCreate({
       <button
         type="button"
         className="btn primary qc-create"
-        onClick={() => update((cfg) => quickCreateSystem(cfg, name, host))}
+        onClick={() => update((cfg) => quickCreateSystem(cfg, name.trim() || tabTitle || '', host))}
       >
         {t('quick.create')}
       </button>
