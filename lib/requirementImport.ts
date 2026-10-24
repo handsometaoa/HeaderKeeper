@@ -99,8 +99,8 @@ function normalizeCreatedAt(raw: unknown, index: number, total: number): number 
 
 /**
  * 把任意候选数据标准化为需求，并做唯一键检查。
- * 唯一键规则：需求带非空 id 时用 id，否则用需求名称。
- * 冲突项和格式无效项不会进入 accepted。
+ * 唯一键同时校验 id 与需求名称：任一在共享库（或本次导入列表）中已存在即视为冲突，
+ * 冲突提示优先归因到 id。冲突项和格式无效项不会进入 accepted。
  */
 export function prepareRequirementImport(
   config: LaneConfig,
@@ -136,19 +136,18 @@ export function prepareRequirementImport(
         : typeof rawId === 'number' && Number.isFinite(rawId)
           ? String(rawId)
           : '';
-    const keyType: ImportKeyType = id ? 'id' : 'name';
-    const keyValue = id || name;
+    const idConflict = !!id && (existingIds.has(id) || seenIds.has(id));
+    const nameConflict = existingNames.has(name) || seenNames.has(name);
 
-    const conflict =
-      keyType === 'id'
-        ? existingIds.has(keyValue) || seenIds.has(keyValue)
-        : existingNames.has(keyValue) || seenNames.has(keyValue);
+    if (id) seenIds.add(id);
+    seenNames.add(name);
 
-    if (keyType === 'id') seenIds.add(keyValue);
-    else seenNames.add(keyValue);
-
-    if (conflict) {
-      conflicts.push({ name, keyType, keyValue });
+    if (idConflict || nameConflict) {
+      conflicts.push({
+        name,
+        keyType: idConflict ? 'id' : 'name',
+        keyValue: idConflict ? id : name,
+      });
       return;
     }
 

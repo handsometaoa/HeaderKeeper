@@ -58,6 +58,12 @@ export function sortRequirementsDesc(requirements: Requirement[]): Requirement[]
     .map(({ requirement }) => requirement);
 }
 
+/** 列表展示用的需求：未过期中最新一个，没有未过期时取已过期中最新一个 */
+export function displayRequirement(requirements: Requirement[]): Requirement | null {
+  const sorted = sortRequirementsDesc(requirements);
+  return sorted.find((requirement) => !requirementExpired(requirement)) ?? sorted[0] ?? null;
+}
+
 export type RequirementStatus = 'all' | 'valid' | 'expired';
 
 export interface RequirementFilter {

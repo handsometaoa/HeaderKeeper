@@ -49,7 +49,7 @@ export function SystemDetail({
     <section className="system-detail">
       <div className="system-summary-bar">
         <button type="button" className="btn system-summary-back" onClick={onBack}>
-          {t('systems.backPlain')}
+          {t('systems.back')}
         </button>
         <span className="system-summary-divider" aria-hidden="true" />
         <div className="system-summary-main">

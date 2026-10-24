@@ -16,8 +16,10 @@ import type { Update } from '@/hooks/useLaneConfig';
 
 const JSON_PLACEHOLDER = `[
     {
+        "id": "req-123",
         "name": "需求123",
         "description": "示例需求",
+        "expiresAt": "2026-12-31T23:59",
         "headers": {
             "X-Lane": "feature-a"
         }

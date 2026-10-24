@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
 import type { HeaderPair } from '@/lib/types';
 import type { T } from '@/lib/i18n';
 
 /**
- * Header 键值行：Key 在需求内必须唯一。
- * 重复时输入框描红并保留草稿，失焦后恢复为已保存的 Key；不会写入重复值。
+ * Header 键值行：Key 在需求内应唯一。
+ * 自由输入不阻断、不回滚（避免受控输入被改写导致增删字符的体感）；
+ * 重复时仅描红提示，注入时同一需求内重复 Key 由后者覆盖（last-wins）。
  */
 export function HeaderPairRow({
   pair,
@@ -22,37 +22,18 @@ export function HeaderPairRow({
   onDelete: () => void;
   t: T;
 }) {
-  const [keyDraft, setKeyDraft] = useState(pair.key);
-  const [invalid, setInvalid] = useState(false);
-
-  useEffect(() => {
-    setKeyDraft(pair.key);
-    setInvalid(false);
-  }, [pair.key]);
-
-  const handleKey = (value: string) => {
-    setKeyDraft(value);
-    const key = value.trim().toLowerCase();
-    const duplicate = !!key && otherKeys.includes(key);
-    setInvalid(duplicate);
-    if (!duplicate) onKeyChange(value);
-  };
+  const key = pair.key.trim().toLowerCase();
+  const duplicate = !!key && otherKeys.includes(key);
 
   return (
     <div className="pair-row">
       <input
         type="text"
-        className={`key-input${invalid ? ' invalid' : ''}`}
-        value={keyDraft}
+        className={`key-input${duplicate ? ' invalid' : ''}`}
+        value={pair.key}
         placeholder={t('requirement.keyPh')}
-        title={invalid ? t('requirement.keyDuplicate') : undefined}
-        onChange={(e) => handleKey(e.target.value)}
-        onBlur={() => {
-          if (invalid) {
-            setKeyDraft(pair.key);
-            setInvalid(false);
-          }
-        }}
+        title={duplicate ? t('requirement.keyDuplicate') : undefined}
+        onChange={(e) => onKeyChange(e.target.value)}
       />
       <input
         type="text"

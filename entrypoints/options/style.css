@@ -594,6 +594,15 @@
   padding: 6px 12px;
   font-size: 11px;
   flex: none;
+  color: var(--accent-deep);
+  background: linear-gradient(135deg, rgb(75 95 155 / 0.12), rgb(95 134 184 / 0.16));
+  border-color: rgb(91 130 180 / 0.3);
+}
+
+.system-summary-back:hover {
+  color: var(--accent-deep);
+  background: linear-gradient(135deg, rgb(75 95 155 / 0.2), rgb(95 134 184 / 0.24));
+  border-color: rgb(91 130 180 / 0.45);
 }
 
 /* 删除类操作统一为红色文字 */

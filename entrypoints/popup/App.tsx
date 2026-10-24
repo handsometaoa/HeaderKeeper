@@ -161,9 +161,16 @@ export default function App() {
                   className="conflict-inline"
                   title={[
                     t('popup.conflictTitle'),
-                    ...conflicts.map(
-                      (conflict) =>
-                        `${conflict.key} ${t('popup.conflictBy')} ${conflict.systems.join('、')} ${t('popup.conflictSuffix')}`,
+                    ...conflicts.map((conflict) =>
+                      conflict.systems.length >= 2
+                        ? t('popup.conflictLineCross', {
+                            key: conflict.key,
+                            systems: conflict.systems.join('、'),
+                          })
+                        : t('popup.conflictLineSelf', {
+                            key: conflict.key,
+                            systems: conflict.systems.join('、'),
+                          }),
                     ),
                   ].join('\n')}
                 >
@@ -172,9 +179,13 @@ export default function App() {
                   </span>
                   <span className="conflict-inline-key mono">{firstConflict.key}</span>
                   <span className="conflict-inline-text">
-                    {t('popup.conflictInline', {
-                      systems: firstConflict.systems.join('、'),
-                    })}
+                    {firstConflict.systems.length >= 2
+                      ? t('popup.conflictInline', {
+                          systems: firstConflict.systems.join('、'),
+                        })
+                      : t('popup.conflictInlineSelf', {
+                          systems: firstConflict.systems.join('、'),
+                        })}
                   </span>
                   {conflicts.length > 1 && (
                     <span className="conflict-inline-more">+{conflicts.length - 1}</span>

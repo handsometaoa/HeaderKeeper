@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { deleteSystem, setSystemEnabled } from '@/lib/ops';
-import { requirementExpired } from '@/lib/requirements';
+import { displayRequirement, requirementExpired } from '@/lib/requirements';
 import type { LaneConfig, Requirement, SystemEntry } from '@/lib/types';
 import type { T } from '@/lib/i18n';
 import type { Update } from '@/hooks/useLaneConfig';
@@ -27,22 +27,22 @@ function SystemRow({
   onDelete: (system: SystemEntry) => void;
 }) {
   const enabled = system.enabled !== false;
-  const activeRequirement = system.activeRequirementId
-    ? requirements.find((r) => r.id === system.activeRequirementId) ?? null
-    : null;
+  // 展示用需求：未过期中最新一个，没有才取已过期中最新一个
+  const display = displayRequirement(
+    requirements.filter((r) => system.requirementIds.includes(r.id)),
+  );
   const globalOff = globalEnabled ? '' : t('systems.globalOffSuffix');
 
   let injectText: string;
   if (!enabled) {
     injectText = t('systems.injectPaused');
-  } else if (!activeRequirement) {
-    injectText = t('systems.noActive') + globalOff;
+  } else if (!display) {
+    injectText = t('systems.noLinked') + globalOff;
   } else {
-    const expiredSuffix = requirementExpired(activeRequirement)
+    const expiredSuffix = requirementExpired(display)
       ? `（${t('requirement.expiredBadge')}）`
       : '';
-    injectText =
-      t('systems.injecting', { name: activeRequirement.name }) + expiredSuffix + globalOff;
+    injectText = t('systems.injecting', { name: display.name }) + expiredSuffix + globalOff;
   }
 
   const visibleDomains = system.domains.slice(0, 2);

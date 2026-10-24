@@ -209,6 +209,8 @@ const IMPORT_STANDARD_JSON = JSON.stringify([
     headers: [{ key: 'X-Imported', value: 'yes' }],
   },
   { id: 'req1', name: '冲突ID' },
+  // id 是新的，但名称与库中需求3重复 → 应按名称判冲突
+  { id: 'import-x', name: '需求3' },
   { name: '需求2' },
   { name: '无ID需求', description: '自动生成 id' },
   { description: '缺少名称' },
@@ -661,7 +663,7 @@ async function main() {
     if (!toggledOff || !toggledOn || !badgeShown || !badgeGone) {
       throw new Error('系统停用/启用未生效');
     }
-    if (!pausedText.includes('已停用') || !injectText.includes('未选择注入需求')) {
+    if (!pausedText.includes('已停用') || !injectText.includes('注入：')) {
       throw new Error('注入状态行文案不符合预期');
     }
 
@@ -866,7 +868,7 @@ async function main() {
     }
     console.log('✓ 需求内联编辑');
 
-    // 内联编辑：同一需求内 Header Key 不可重复
+    // 内联编辑：重复 Header Key 自由写入，描红提示不阻断（注入时 last-wins）
     const dupCardReady = await options.eval(`(() => {
       const card = [...document.querySelectorAll('.requirement-card')].find(
         (c) => c.querySelector('.scheme-name')?.value === '需求1');
@@ -891,14 +893,21 @@ async function main() {
       const card = [...document.querySelectorAll('.requirement-card')].find(
         (c) => c.querySelector('.scheme-name')?.value === '需求1');
       const inputs = [...card.querySelectorAll('.key-input')];
-      return inputs[inputs.length - 1].classList.contains('invalid');
-    })()`);
+      const input = inputs[inputs.length - 1];
+      return JSON.stringify({
+        invalid: input.classList.contains('invalid'),
+        shown: input.value,
+        title: input.title.includes('只保留最后一个'),
+      });
+    })()`).then(JSON.parse);
     cfg = await getConfig(options);
     const req1 = cfg.requirements.find((r) => r.name === '需求1');
     const lastHeader = req1.headers[req1.headers.length - 1];
-    console.log(`✓ 重复 Header Key: 描红=${dupInvalid}, 未写入=${lastHeader.key === ''}`);
-    if (!dupInvalid || lastHeader.key !== '') {
-      throw new Error('重复 Header Key 未被阻止');
+    console.log(
+      `✓ 重复 Header Key: 描红=${dupInvalid.invalid}, 输入保留="${dupInvalid.shown}", 已写入=${lastHeader.key === 'X-Lane'}, 提示=${dupInvalid.title}`,
+    );
+    if (!dupInvalid.invalid || dupInvalid.shown !== 'X-Lane' || lastHeader.key !== 'X-Lane') {
+      throw new Error('重复 Header Key 应自由写入并描红');
     }
 
     // 离开页面：未修正的空 Key 行应被丢弃
@@ -941,7 +950,7 @@ async function main() {
     );
     if (
       !importSummary.includes('可导入 2 条') ||
-      importConflicts !== 2 ||
+      importConflicts !== 3 ||
       importInvalid !== 1
     ) {
       throw new Error('标准导入预览不符合预期');
