@@ -88,6 +88,11 @@ export function SystemCard({
                 )}
               </span>
               <span className="scheme-state mono">
+                {isActive && (
+                  <span className="scheme-check" aria-hidden="true">
+                    ✓
+                  </span>
+                )}
                 {isActive ? t('card.stateOn') : t('card.stateOff')}
               </span>
             </button>

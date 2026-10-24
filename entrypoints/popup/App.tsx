@@ -8,6 +8,7 @@ import { activeInjectableRequirement, systemRequirements } from '@/lib/requireme
 import { QuickCreate } from './components/QuickCreate';
 import { SystemCard } from './components/SystemCard';
 import { useLaneConfig } from '@/hooks/useLaneConfig';
+import { useTheme } from '@/hooks/useTheme';
 import { useLangFromConfig } from '@/hooks/useI18n';
 
 function openOptions() {
@@ -29,6 +30,7 @@ function readStoredTab(): PopupTab {
 export default function App() {
   const { config, update } = useLaneConfig();
   const { t } = useLangFromConfig(config, update);
+  useTheme(config);
   const [host, setHost] = useState<string | null>(null);
   const [hostResolved, setHostResolved] = useState(false);
   // 当前标签页标题：快捷创建系统时作为默认名称
