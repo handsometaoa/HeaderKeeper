@@ -3,7 +3,7 @@
 基于 [WXT](https://wxt.dev) + React + TypeScript 的浏览器插件（Chrome Manifest V3）：**按域名匹配「系统」，系统引用共享需求库中的「需求」（泳道），在弹窗中一键切换，重写请求 Header**。适用于泳道测试 / 灰度发布 / 多需求并行开发。
 
 <p>
-  <img alt="Version" src="https://img.shields.io/badge/version-2.0.0-33527c">
+  <img alt="Version" src="https://img.shields.io/badge/version-2.0.1-33527c">
   <img alt="WXT" src="https://img.shields.io/badge/WXT-0.21-7c3aed">
   <img alt="React" src="https://img.shields.io/badge/React-19-149eca">
   <img alt="MV3" src="https://img.shields.io/badge/Manifest-V3-4285f4">
@@ -66,7 +66,7 @@
 
 ## 安装
 
-从 [Releases](https://github.com/handsometaoa/HeaderKeeper/releases) 下载最新 v2.0.0 的 `*-chrome.zip` 并解压，然后在 Chrome / Edge 的 `扩展管理` 页开启「开发者模式」→「加载已解压的扩展程序」→ 选择解压后的目录。
+从 [Releases](https://github.com/handsometaoa/HeaderKeeper/releases) 下载最新 v2.0.1 的 `*-chrome.zip` 并解压，然后在 Chrome / Edge 的 `扩展管理` 页开启「开发者模式」→「加载已解压的扩展程序」→ 选择解压后的目录。
 
 ## 使用方法
 
