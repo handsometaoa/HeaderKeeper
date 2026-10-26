@@ -15,9 +15,25 @@ function applyTheme(resolved: 'light' | 'dark') {
 }
 
 /**
+ * 在 React 渲染前应用缓存的明暗主题。
+ * MV3 CSP 禁止扩展页面内联脚本，防闪逻辑从 index.html 内联脚本移到这里，
+ * 由各入口 main.tsx 在挂载前同步调用。
+ */
+export function applyCachedTheme() {
+  try {
+    const cached = localStorage.getItem(THEME_KEY);
+    if (cached === 'light' || cached === 'dark') {
+      document.documentElement.dataset.theme = cached;
+    }
+  } catch {
+    /* localStorage 不可用时保持默认 */
+  }
+}
+
+/**
  * 主题应用：读取配置中的主题偏好（light/dark/system），
  * system 模式跟随 prefers-color-scheme 并实时响应系统切换。
- * popup 与 options 共用；config 未加载前保持现状（index.html 内联脚本已按缓存设值）。
+ * popup 与 options 共用；config 未加载前保持 applyCachedTheme 设好的缓存值。
  */
 export function useTheme(config: LaneConfig | null) {
   useEffect(() => {

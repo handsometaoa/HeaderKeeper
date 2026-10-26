@@ -43,11 +43,14 @@ export function RequirementImportModal({
   update,
   t,
   onClose,
+  onImported,
 }: {
   config: LaneConfig;
   update: Update;
   t: T;
   onClose: () => void;
+  /** 导入写入成功后回调（ok=导入条数，skipped=冲突+无效条数），随后弹窗立即关闭 */
+  onImported: (ok: number, skipped: number) => void;
 }) {
   const [mode, setMode] = useState<Mode>('standard');
   const [jsonText, setJsonText] = useState('');
@@ -57,7 +60,6 @@ export function RequirementImportModal({
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [rawResult, setRawResult] = useState<unknown>(null);
   const [parsing, setParsing] = useState(false);
-  const [result, setResult] = useState<{ ok: number; skipped: number } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -182,7 +184,6 @@ export function RequirementImportModal({
     setError('');
     setPreview(null);
     setRawResult(null);
-    setResult(null);
     setExpandedId(null);
   };
 
@@ -257,10 +258,12 @@ export function RequirementImportModal({
       return;
     }
     update((cfg) => applyRequirementImport(cfg, finalPreview.accepted));
-    setResult({
-      ok: finalPreview.accepted.length,
-      skipped: finalPreview.conflicts.length + finalPreview.invalid.length,
-    });
+    // 提示与关闭都交给需求页：立即关闭弹窗，顶部 toast 展示结果
+    onImported(
+      finalPreview.accepted.length,
+      finalPreview.conflicts.length + finalPreview.invalid.length,
+    );
+    onClose();
   };
 
   const handleFile = async (file: File | undefined) => {
@@ -433,7 +436,7 @@ export function RequirementImportModal({
 
               {preview.accepted.length > 0 && (
                 <div className="import-list">
-                  {preview.accepted.slice(0, 8).map((requirement, index) => {
+                  {preview.accepted.map((requirement, index) => {
                     const itemKey = `${requirement.id}-${index}`;
                     const open = expandedId === itemKey;
                     return (
@@ -475,11 +478,6 @@ export function RequirementImportModal({
                       </div>
                     );
                   })}
-                  {preview.accepted.length > 8 && (
-                    <div className="import-more">
-                      {t('import.more', { n: preview.accepted.length - 8 })}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -527,43 +525,30 @@ export function RequirementImportModal({
         </div>
 
         <div className="import-actions">
-          {result ? (
-            <>
-              <span className="import-result">
-                {t('import.success', { ok: result.ok, skipped: result.skipped })}
-              </span>
-              <button type="button" className="btn primary" onClick={onClose}>
-                {t('import.done')}
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" className="btn" onClick={onClose}>
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                className="btn primary"
-                disabled={
-                  preview
-                    ? preview.accepted.length === 0
-                    : parsing || !jsonText.trim()
-                }
-                onClick={() => {
-                  if (preview) handleImport();
-                  else void handleParse();
-                }}
-              >
-                {preview
-                  ? preview.accepted.length > 0
-                    ? t('import.importButton', { n: preview.accepted.length })
-                    : t('import.importButtonEmpty')
-                  : parsing
-                    ? t('import.parsing')
-                    : t('import.parse')}
-              </button>
-            </>
-          )}
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={
+              preview
+                ? preview.accepted.length === 0
+                : parsing || !jsonText.trim()
+            }
+            onClick={() => {
+              if (preview) handleImport();
+              else void handleParse();
+            }}
+          >
+            {preview
+              ? preview.accepted.length > 0
+                ? t('import.importButton', { n: preview.accepted.length })
+                : t('import.importButtonEmpty')
+              : parsing
+                ? t('import.parsing')
+                : t('import.parse')}
+          </button>
         </div>
 
         <input

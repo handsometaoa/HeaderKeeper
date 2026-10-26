@@ -19,7 +19,7 @@ export default function App() {
   useTheme(config);
   const [section, setSection] = useState<Section>('systems');
   const [detailSystemId, setDetailSystemId] = useState<string | null>(null);
-  const [toast, setToast] = useState(false);
+  const [toast, setToast] = useState<{ text: string; variant: 'warn' | 'success' } | null>(null);
   const prevGlobalRef = useRef<boolean | undefined>(undefined);
   const queryHandledRef = useRef(false);
 
@@ -28,15 +28,20 @@ export default function App() {
     if (!config) return;
     const previous = prevGlobalRef.current;
     prevGlobalRef.current = config.globalEnabled;
-    if (previous === true && !config.globalEnabled) setToast(true);
-    if (config.globalEnabled) setToast(false);
+    if (previous === true && !config.globalEnabled) {
+      setToast({ text: t('settings.bannerOff'), variant: 'warn' });
+    }
+    if (config.globalEnabled) setToast(null);
   }, [config?.globalEnabled]);
 
   useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(false), 3000);
+    const timer = window.setTimeout(() => setToast(null), 3000);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  /** 供各面板弹出 3 秒顶部提示（导入成功等操作反馈） */
+  const showToast = (text: string, variant: 'warn' | 'success') => setToast({ text, variant });
 
   // 从弹窗「编辑」进入时，用 ?system=<id> 直接定位到系统详情
   useEffect(() => {
@@ -176,6 +181,7 @@ export default function App() {
               update={update}
               t={t}
               onOpenSystem={openSystem}
+              onToast={showToast}
             />
           ) : (
             <AboutPanel t={t} />
@@ -197,23 +203,40 @@ export default function App() {
       </div>
 
       {toast && (
-        <div className="toast" role="status">
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          {t('settings.bannerOff')}
+        <div className={`toast ${toast.variant}`} role="status">
+          {toast.variant === 'success' ? (
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="8 12.5 11 15.5 16 9.5" />
+            </svg>
+          ) : (
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          )}
+          {toast.text}
         </div>
       )}
     </div>

@@ -20,16 +20,26 @@ export function RequirementsPanel({
   update,
   t,
   onOpenSystem,
+  onToast,
 }: {
   config: LaneConfig;
   update: Update;
   t: T;
   onOpenSystem: (systemId: string) => void;
+  onToast: (text: string, variant: 'warn' | 'success') => void;
 }) {
   const [filters, setFilters] = useState(emptyRequirementFilter);
   const [importOpen, setImportOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Requirement | null>(null);
+
+  /** 导入成功：弹窗立即关闭，在需求页顶部提示结果 */
+  const handleImported = (ok: number, skipped: number) => {
+    onToast(
+      skipped > 0 ? t('import.success', { ok, skipped }) : t('import.successOnly', { ok }),
+      'success',
+    );
+  };
 
   const ordered = sortRequirementsDesc(config.requirements);
   const filtered = filterRequirements(ordered, filters);
@@ -113,6 +123,7 @@ export function RequirementsPanel({
           update={update}
           t={t}
           onClose={() => setImportOpen(false)}
+          onImported={handleImported}
         />
       )}
     </section>

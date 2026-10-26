@@ -25,6 +25,8 @@
   --accent-deep: #33527c;
   --accent-soft: rgb(71 107 158 / 0.1);
   --green: #3f7f78;
+  --green-soft: rgb(63 127 120 / 0.12);
+  --green-line: rgb(63 127 120 / 0.32);
   --red: #a95747;
   --red-soft: rgb(169 87 71 / 0.1);
   --grad-accent: linear-gradient(135deg, #4b5f9b 0%, #5f86b8 100%);
@@ -83,6 +85,8 @@
   --accent-deep: #a9c5e9;
   --accent-soft: rgb(126 164 212 / 0.14);
   --green: #5fb0a6;
+  --green-soft: rgb(95 176 166 / 0.14);
+  --green-line: rgb(95 176 166 / 0.34);
   --red: #d6907e;
   --red-soft: rgb(214 144 126 / 0.14);
   --grad-accent: linear-gradient(135deg, #3c5188 0%, #4f76a8 100%);
